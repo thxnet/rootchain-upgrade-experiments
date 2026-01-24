@@ -1,0 +1,4 @@
+endpoint: wss://node.testnet.thxnet.org/archive-001/ws
+db: ./db-thxnet-testnet.sqlite
+mockSignature: true
+port: 8000

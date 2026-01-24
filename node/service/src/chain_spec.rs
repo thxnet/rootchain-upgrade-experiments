@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 
 // Polkadot is free software: you can redistribute it and/or modify
@@ -16,11 +16,7 @@
 
 //! Polkadot chain configurations.
 
-use thxnet_runtime as thxnet;
-use thxnet_testnet_runtime as thxnet_testnet;
-
 use beefy_primitives::crypto::AuthorityId as BeefyId;
-use frame_support::weights::Weight;
 use grandpa::AuthorityId as GrandpaId;
 #[cfg(feature = "kusama-native")]
 use kusama_runtime as kusama;
@@ -50,6 +46,8 @@ use westend_runtime as westend;
 #[cfg(feature = "westend-native")]
 use westend_runtime_constants::currency::UNITS as WND;
 
+#[cfg(feature = "polkadot-native")]
+const POLKADOT_STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 #[cfg(feature = "kusama-native")]
 const KUSAMA_STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 #[cfg(feature = "westend-native")]
@@ -58,7 +56,7 @@ const WESTEND_STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/
 const ROCOCO_STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 #[cfg(feature = "rococo-native")]
 const VERSI_STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const THXNET_DEFAULT_PROTOCOL_ID: &str = "thx";
+const DEFAULT_PROTOCOL_ID: &str = "dot";
 
 /// Node `ChainSpec` extensions.
 ///
@@ -80,13 +78,6 @@ pub struct Extensions {
 /// The `ChainSpec` parameterized for the polkadot runtime.
 #[cfg(feature = "polkadot-native")]
 pub type PolkadotChainSpec = service::GenericChainSpec<polkadot::GenesisConfig, Extensions>;
-
-#[cfg(feature = "polkadot-native")]
-pub type ThxnetChainSpec = service::GenericChainSpec<thxnet::GenesisConfig, Extensions>;
-
-#[cfg(feature = "polkadot-native")]
-pub type ThxnetTestnetChainSpec =
-	service::GenericChainSpec<thxnet_testnet::GenesisConfig, Extensions>;
 
 // Dummy chain spec, in case when we don't have the native runtime.
 pub type DummyChainSpec = service::GenericChainSpec<(), Extensions>;
@@ -197,7 +188,6 @@ fn default_parachains_host_configuration(
 		max_upward_queue_count: 8,
 		max_upward_queue_size: 1024 * 1024,
 		max_downward_message_size: 1024 * 1024,
-		ump_service_total_weight: Weight::from_parts(100_000_000_000, MAX_POV_SIZE as u64),
 		max_upward_message_size: 50 * 1024,
 		max_upward_message_num_per_candidate: 5,
 		hrmp_sender_deposit: 0,
@@ -242,44 +232,6 @@ fn polkadot_session_keys(
 	authority_discovery: AuthorityDiscoveryId,
 ) -> polkadot::SessionKeys {
 	polkadot::SessionKeys {
-		babe,
-		grandpa,
-		im_online,
-		para_validator,
-		para_assignment,
-		authority_discovery,
-	}
-}
-
-#[cfg(feature = "polkadot-native")]
-fn thxnet_session_keys(
-	babe: BabeId,
-	grandpa: GrandpaId,
-	im_online: ImOnlineId,
-	para_validator: ValidatorId,
-	para_assignment: AssignmentId,
-	authority_discovery: AuthorityDiscoveryId,
-) -> thxnet::SessionKeys {
-	thxnet::SessionKeys {
-		babe,
-		grandpa,
-		im_online,
-		para_validator,
-		para_assignment,
-		authority_discovery,
-	}
-}
-
-#[cfg(feature = "polkadot-native")]
-fn thxnet_testnet_session_keys(
-	babe: BabeId,
-	grandpa: GrandpaId,
-	im_online: ImOnlineId,
-	para_validator: ValidatorId,
-	para_assignment: AssignmentId,
-	authority_discovery: AuthorityDiscoveryId,
-) -> thxnet_testnet::SessionKeys {
-	thxnet_testnet::SessionKeys {
 		babe,
 		grandpa,
 		im_online,
@@ -349,771 +301,9 @@ fn rococo_session_keys(
 }
 
 #[cfg(feature = "polkadot-native")]
-fn thxnet_mainnet_config_genesis(wasm_binary: &[u8]) -> thxnet::GenesisConfig {
-	use hex_literal::hex;
-	use sp_core::crypto::UncheckedInto;
-
-	struct InitialAuthorityConfiguration {
-		stash_account_id: AccountId,
-		controller_account_id: AccountId,
-		babe_id: BabeId,
-		grandpa_id: GrandpaId,
-		im_online_id: ImOnlineId,
-		validator_id: ValidatorId,
-		assignment_id: AssignmentId,
-		authority_discovery_id: AuthorityDiscoveryId,
-		endowed_balance: u128,
-		stash: u128,
-	}
-
-	let initial_authorities: Vec<InitialAuthorityConfiguration> = vec![
-		InitialAuthorityConfiguration {
-			// validator-thxlab-01
-			// 5D4TQmU3gD9cYkvqRoMQqjDdmEsmVtGeFvr8C7kbPSbPiKbE
-			stash_account_id: hex![
-				"2c0b9a19737f7a05ca1a3073cfee8c8fc7e80b48e5344e748058b435f1070538"
-			]
-			.into(),
-			// 5Ev6mnYb1PoiPmd1LahHkHCtRbbsg5cTArrqSZpZeDFxNbad
-			controller_account_id: hex![
-				"7e24a21b806d49905159c183828be1f2598d06ddab3dfeb57ac6e21ee6645c7e"
-			]
-			.into(),
-			// 5CXsyHNCP5BhvqEdjJDJNkcf11Lc4EGcP1hz5kTxg7LnhAmJ
-			babe_id: hex!["14b9ac3d042c6e457da9fd7f4f28c22e3b86ffdf594248d581bcc792e418a34f"]
-				.unchecked_into(),
-			// 5CNfCS5SZ6zEu9YtW1HKeyBxWibrwedgd6by4y9W1D2R1NbA
-			grandpa_id: hex!["0db1772ae73b8287137e1fc40a918fdbb3a0855cdd86c2117f867f7c1351ae12"]
-				.unchecked_into(),
-			// 5CXbxZGvTfFmTQZxuTAVuv8SxgjHoh3ikQNBLxd29q3BT9Za
-			im_online_id: hex!["1483c51730d676c1f4f277f6e670d2450b90fb351ad084a58606c26044b6361c"]
-				.unchecked_into(),
-			// 5GWntGfMm2AgX1nidEMYMWXFHd3MGRZLN4JMpjsWZybUz5wW
-			validator_id: hex!["c4d63d22acb407d72541a00c7407419f50db0f7f2b273cdf00401b46c66a2b63"]
-				.unchecked_into(),
-			// 5HY36bKFzDLhkAYqd92MX1GcK6nyr3SrnEWJ1nrEUPaVRic5
-			assignment_id: hex!["f2058f9e67c9556c23165b08013b5a0a95d50f694aedf2eda1193393fc2ec714"]
-				.unchecked_into(),
-			// 5CFwitxmm1XuDww1pYUrgT9DwLzCBD1D3BZiFTjGSBJhiVsV
-			authority_discovery_id: hex![
-				"0892606660d6b48b30d31e1ffaec74ce6f99c0f646ae30e6944fca59692e030a"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxlab-02
-			// 5FsRmkNi5jTqo6N4nRrCYUWjpdrA8Z4fSm8MrCohHpLPJrmy
-			stash_account_id: hex![
-				"a85716874709c6d35ab73354b349ee65ac01fd96e3b9d54360f46733f99f894c"
-			]
-			.into(),
-			// 5F9myTBz5jgc7Tbv6vUrpwKtk9Grmb8uBifxDkwiPnivY8wh
-			controller_account_id: hex![
-				"8892c94ae7b688da0e512399b49edd3dcab3255de0e679dfc5c3be3daaa07004"
-			]
-			.into(),
-			// 5He6cKoXeMETiqzq1oQCRbGtcPig6cJdzgmURNSqmKErGeR2
-			babe_id: hex!["f6a4dba621c33e52112d1baaa762e2efeae7924d87ee42aac7da7db9cae0381a"]
-				.unchecked_into(),
-			// 5Fv7rAvMJaKGEWJr1DNxhn5AeaiPot2TuHNvsCzAk9LyPDLR
-			grandpa_id: hex!["aa647ccf0d3ba9be191d3daccf69a891bc3b66e2dea3d27ecdb8b3371bbb9ffd"]
-				.unchecked_into(),
-			// 5FnyuTTxFwm9RHyYQXSoHHNcFU7C8TNgDNbhyHF4jTWcxVe8
-			im_online_id: hex!["a4f307aca9c05ca0867c584226f7ef09c7b55786aa0f3866c0c6006bca43b627"]
-				.unchecked_into(),
-			// 5HmXGskzdWQkXoiUx5XaT6BD7wH4gFLMU7CbwisEd64wbpWg
-			validator_id: hex!["fc4e9ac1e5eeb703930b42a3e73df015592f53c17067a8024a14a1065ce9531f"]
-				.unchecked_into(),
-			// 5HQJhiHVkf82zUgKZ9sYK3TGLEf7RFHCTzGzdAYJkU5Vwmzq
-			assignment_id: hex!["ec202171959b1dbb5a3390dc19482e6565212ced3c612b27f814a6b441656652"]
-				.unchecked_into(),
-			// 5FpVRiwko6FKQ1Zxa8iRwDaskaLaQK8R1Y1HPJDJoU3kjWGy
-			authority_discovery_id: hex![
-				"a619a79ea64db768cf90da598b9d2486079107a27343cb1dcb31669e7c30a721"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxlab-03
-			// 5EUeWw1fCimAermEFuKqspcfPyyA8pyphunwuNFUUSZeSrQ4
-			stash_account_id: hex![
-				"6abb1cb91058c905bd8419467e5a892376cf1715e4a47240fe2aea86513b3429"
-			]
-			.into(),
-			// 5CJwEpu1ALMVZ5WJAh16JfToNr2hV5nteYVXyg6hK3PHaone
-			controller_account_id: hex![
-				"0ada7bcd0532fa2cd1ea73dc597e7109484ded65b481ccca1bf120e6c8d82f2d"
-			]
-			.into(),
-			// 5GHhqAQfSTrCCAnRx7oUcAtz8w7Sv5SpdbFSq5ce3aQPdtMh
-			babe_id: hex!["badb0963a4270b3ba7cc455d8126fccd8a244d01d72839940c62046b82eb417d"]
-				.unchecked_into(),
-			// 5Dn9oyDjpcm6yp3bNRnsHEDgzxnkRgqvinChpt3WfZScjt48
-			grandpa_id: hex!["4bd8a9865773acc466e76de6538299431c419c4b14e0f4ba2c9f4e28184cd5f1"]
-				.unchecked_into(),
-			// 5HEgZFwa7aSRR8ViiPzupRyyFY1whqAQ2KVfsP2B7KEW3wEC
-			im_online_id: hex!["e4c93e98c640835139fe7545297b95f9953a8e12c19514241a0fbf5002377d37"]
-				.unchecked_into(),
-			// 5CotZK9tmFxTfoV2wkQFvLsSvAUsTDEhWv8RaZoT8SXPLYCh
-			validator_id: hex!["20ef930cbed9f2ee502666d501c4f7304485ee7c7026b7c75b0245bde9abe061"]
-				.unchecked_into(),
-			// 5Ev7vcMkLsgwZmmKqDgMANECS5aVPFRNiGuaHNM56zurxtxB
-			assignment_id: hex!["7e2882fe763f621c0ed52bcbf98a1400b1e02c1cecf8739d7f6c34e936bd794e"]
-				.unchecked_into(),
-			// 5FvDvVNceFRzGP5i3BK7RvzbYa3qpPMRcy4ty5tRC5jruLDu
-			authority_discovery_id: hex![
-				"aa78ef9b006cdb7f0abc323bc5f9afa5a5b8ecd6724968be374241034fde0104"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxlab-04
-			// 5CP5k9GxHiLBbFfVBGDP5uxYw8CKFfVGHCMZFkH31vJLccdN
-			stash_account_id: hex![
-				"0e0418df3ae3ad45318637dfbdc52024818199097156fa2c6a85b3742eed551b"
-			]
-			.into(),
-			// 5E1pZya82RdeiJZ3yiUteDtEEHmAjHYb2ENydfAJKoRNjkA7
-			controller_account_id: hex![
-				"564553724320d3d4113d9440946e43518e536358f45318ac231fa24b9ab2f547"
-			]
-			.into(),
-			// 5Fk8sD6tsGFVFZJC6GZHMe2AiXFK5eUC39xHJGcjD6X7rAJu
-			babe_id: hex!["a2c775c3763ada17a8902c9c7ab21bd8954b66b1a70ade23ecae5b09a7836a6b"]
-				.unchecked_into(),
-			// 5CLCUaSjUhmukZEsp9bTgWi6gBDCMEVLXebN79U46q68Qzh1
-			grandpa_id: hex!["0bd105873f82c71c02d22569b8ef8713bf90c290826a2ed75f23b45c65d0b380"]
-				.unchecked_into(),
-			// 5D9eTF1DmhYdVykWxeeAVavSuU1LvCiUS4Wonn2GAvGpWpmY
-			im_online_id: hex!["3001007d1da04c41f18f3a5264f8e1900094d1c58708d41917b0d06cda735500"]
-				.unchecked_into(),
-			// 5D2UqX9qwi8LCMN7syDQtxStz9HsGv3MxH2fMfqj8vwqHiYD
-			validator_id: hex!["2a89ea031ce285a28be58c4156f1c75d4af6489092f95ea131b44c2eb7ac5138"]
-				.unchecked_into(),
-			// 5E7YSk5jGcXBUgskz2wenen9KJDZDnpRqEjsWMtZV7xmDY9S
-			assignment_id: hex!["5aa2848f40f55cc43966b67ad7cbcae522badffe4a146f496d65054d80d43b30"]
-				.unchecked_into(),
-			// 5CPtKqZaD24T9zne64TEiJCwpuZhC2QrTwNhPKebnia5pYB4
-			authority_discovery_id: hex![
-				"0ea0e70fa4585af657cfb929689af89065c0c2ff963c47f2a6467324afb5ee0c"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxlab-05
-			// 5CfaKGdo79tuzCCcL6qZhUSkoPSfcCyCeGsqMozmBbPXdszT
-			stash_account_id: hex![
-				"1a9833e438f1180db341138476aeae1d2b66f6f69ca31386ff43fdd10f837743"
-			]
-			.into(),
-			// 5H5yBENm5cYGA1m5eJrU7srdB7WrLh49B3NsSCBJksfraABN
-			controller_account_id: hex![
-				"de23fc0ae8b013fbf0ec6d0bbd51763f29666c487cf3624213b7f1cee4ba0d79"
-			]
-			.into(),
-			// 5GZZV7ijJBUrn33USBqBShrxccAT7VeNuRGzAZWM623kPGcN
-			babe_id: hex!["c6f2de87fa71351f5e800099b8b2a606409777ad5ba01c44493f372c8ea09948"]
-				.unchecked_into(),
-			// 5FMYd9YVje234kxfCwZ5UmWoEQ6Zjz78GjjN3hQLM7SH3wDi
-			grandpa_id: hex!["918cca71ce0278acc7fe8e1540a04a0a29ba5b2be5f8fbc8ebdd4bb35d87e3f6"]
-				.unchecked_into(),
-			// 5GshjczXkSpUYnn18MTCV5KQkyCzyHAgPHDpJpeR6VakKY4i
-			im_online_id: hex!["d4c90f0ccd9d91b1b9c7a8453160861eed77cf51e4cdee9cf4698c9b7b03012e"]
-				.unchecked_into(),
-			// 5Ck7TuqMn25di6WtYZFqm1gSoz5cpxcLrEm2s5UF1Xauuro9
-			validator_id: hex!["1e0e0a89a830c25a7fa8293394c32b2b8cffd62a0d52ab65c3ee343d2509a43c"]
-				.unchecked_into(),
-			// 5DFeNGeQb7pwRw4Q9EsqZBzPsSbPV9Pd7KSXxXoCwtB3e7wy
-			assignment_id: hex!["34942f8f3af6588b0cc5782da5e8dc8e0ff421804a49e42f4ffd055d4146702f"]
-				.unchecked_into(),
-			// 5DFaRGzDZdotjVmxo2tos9zKps3o49Aje1sRhgtS68ge5QkB
-			authority_discovery_id: hex![
-				"3486e52152c4dfdc2154bf085787b5a4266237f2e61799d3dd5c19cec5191677"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxlab-06
-			// 5HNUHr4BN81Yb5bjK6EKp8gT4ryQwjjXHLnWecUKqWAudAsm
-			stash_account_id: hex![
-				"eab9eaeb76bb357ecbd91f769f1065260a241a86e4ee668a03961b229f24fc65"
-			]
-			.into(),
-			// 5CowpDXBbgnkJX7HDpddfkeB92MGuJCb4vedXEjDC8pvm8VK
-			controller_account_id: hex![
-				"20fa89cc29a76ac3575260f3821800f1a86d1f1e5dcbb98647d1e7c2ca6a1a0b"
-			]
-			.into(),
-			// 5FZD3BKZTg3wGgEB3Bp6SmK7wxBdWSBuyW5ZqBv8y5774gpz
-			babe_id: hex!["9a71cdebd59f9632ef504e56933433f971533eb41f180f8b0be96ac2ffff9841"]
-				.unchecked_into(),
-			// 5ECrXnTf7R7W5wF8bv4xJiJYYyQUgnZfGy6uce4t36puANrT
-			grandpa_id: hex!["5eafa17ce5922539a755717db9069a897f99e764b9570125944baccfd762ae93"]
-				.unchecked_into(),
-			// 5HfuEWtpg7m1jU2tsrKFahT4LZvjT7sdEGwdqQYRVu9GocDm
-			im_online_id: hex!["f8050dc1c681b6c81c00793306fcf76d69ff0d826ed329d2223e625cfb8c493a"]
-				.unchecked_into(),
-			// 5GKi4LSFjakjSnkTE1MCx1qEW8EewbxUrF6xei4cRjmDsYe5
-			validator_id: hex!["bc624ac2d1b2f2997d16a7d0a1c124005cd1f4fcc0911f58437fc191fec2f241"]
-				.unchecked_into(),
-			// 5HNMTXEtKEMNYnnXtbZCS2vkL5D7vwhQQpPehckWtEaETvwG
-			assignment_id: hex!["eaa2ea4582cd08270b23a3250fcf1178aa204d1e1aae1c06dcbf4489f97e720e"]
-				.unchecked_into(),
-			// 5ELDLCNRqX61SxCVyi2mKjPXyG8gPvXf1BXX1UA3Ez16Q5RD
-			authority_discovery_id: hex![
-				"644c5e4f194babc5f07bdffc12257ca21dbf4d82293b93409f609570b20df308"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-mw3w
-			// 5C7uufNA2UA1Xhuw2CbWA8CDnjDLPGYzsLpo2TSAfLp4CaV1
-			stash_account_id: hex![
-				"02724e38ff79e163d059f48055e35033ba82970c5aeec44679eebede7ee36d2e"
-			]
-			.into(),
-			// 5HnQDWZL7VEuDxmh834QiTbBm9wFgBJfAgwHGL539XZWcJn3
-			controller_account_id: hex![
-				"fcfa172a61425916914c2ffc5e4b8eb8d40422c5b94e172a90a4245a3915b973"
-			]
-			.into(),
-			// 5HKgqN3fqkEZ4UBupvKKEenqQpgbhmGZSigVLHapegrV5jue
-			babe_id: hex!["e89a68023f4977a5703430297114f51d605d3ba7122c7cfbfd51d51ad43b3a0a"]
-				.unchecked_into(),
-			// 5DQjEK2cWN2Qnp5sFdJQAoQ5RLaveyCxYpCbc8kWK2mbkrHi
-			grandpa_id: hex!["3b81c394986154d62f52b7d24a825a8b0068c8c7103359b35629894610ff8f3b"]
-				.unchecked_into(),
-			// 5GsNmaQyLZH9ZaoSYjQK6S4NkTSWtqpKPuM6WorY6RTUDduB
-			im_online_id: hex!["d489366c13d6b5a31733c88180eee6667d70d4ff146d52aed4fe6901c536d259"]
-				.unchecked_into(),
-			// 5CvZ26r67wwh9mjpKCsPkDpupTCg5szPfHLcFg2ZyW56cXk8
-			validator_id: hex!["260485601946173bbb60297e43743feba7b5965cbd5d343d87e75a07af52e639"]
-				.unchecked_into(),
-			// 5DkvxywcaZmKNfxYQtargUf7it67gZpFhmAzoqadLoPq3PLU
-			assignment_id: hex!["4aea2d901c0e288b12a12dfcd5c1d40c9bca980cc9b59931a408a9fd9aefa274"]
-				.unchecked_into(),
-			// 5FzzqjbgkbxkLhpb33VwtTA9HX5RtwUVmNE1nveH47ojvmNf
-			authority_discovery_id: hex![
-				"ae1d2007a2ead4297513068c09ece1f4690381881e17b97f643a78597511ab16"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-bit3x
-			// 5F1cw9ritqUhSR2tFgHfm8FGytPKK5CmNwHgsR7k5wNpudFQ
-			stash_account_id: hex![
-				"825a6497bd926a881d39b1cba8f38418384521725c81fcb3df86eeca286cd139"
-			]
-			.into(),
-			// 5DAfUALKbNGrvM4BiEU8AZ5GQCVat3xyiZhk5ry6ud17XwPY
-			controller_account_id: hex![
-				"30c7aabf284eb4df638ecc2277860043a6d804fe00af7bfdb346de5ab3d00438"
-			]
-			.into(),
-			// 5Cz212oEAed58Y7dPLZgr4uUVndBbpNXZxHxJ7WsC4Go47Y6
-			babe_id: hex!["28a915d10a6da23ca97f54a85a324f8fe42c03f4bd23d128707c98b777e70025"]
-				.unchecked_into(),
-			// 5FWBTpBSv4vCR4SC5Q5XT4zGvXF3cAT7AHfe7i45yRdUxwAL
-			grandpa_id: hex!["9822c3f17e42e248abe129320f72cdefed3d8e17800428bb871abb606c756320"]
-				.unchecked_into(),
-			// 5GEPMogBRejbdtfwmE5oNgK8bgJPnbEf4yvBUSVFgXkYhnJu
-			im_online_id: hex!["b8531e86d49ac0cfb244722ba26cb9c0ac843b7d863ea673d558b137956b080b"]
-				.unchecked_into(),
-			// 5ChdhgWM151SKTJo5UU9jR4QWKxmGA6kK3G6CXA4Stqd2x93
-			validator_id: hex!["1c2a17da041d5d0b456dbcdc9880ee628af58b486ff77ffc85ecf5e7c46a7018"]
-				.unchecked_into(),
-			// 5HdT6E71boch8V9Uwr1ae3MvCgdjQkDFDscPY6rsTYLL9toN
-			assignment_id: hex!["f6268ed9a98947122b001ffcb5035cc63f61843fd4119a61eb8c46f282271553"]
-				.unchecked_into(),
-			// 5GKYqj16W8BHbZHXrx36RwW2ncZkvADsTRymsp3rqYRHbi5K
-			authority_discovery_id: hex![
-				"bc43436e397e074f950e5e628ec6aa7876818b86dd01b6fd673c55e4ff19f25f"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-aro
-			// 5Dtrv7DtoAygS9tNsc9yjCfnLnKqrWL1VLXbme15xNqUa6WV
-			stash_account_id: hex![
-				"50f68259b78b5d98ae264afdbe048ec8195dc0c24d9766bc5c82641f0f86770c"
-			]
-			.into(),
-			// 5G6iwhKUmTp9tcBJg9kVf17kcoMGyWZ87QQD1s6EEJKyqcJW
-			controller_account_id: hex![
-				"b27b152bb9ab4421934d44e244416e8fbba6f41978ef0f6b3902e7b0863a402c"
-			]
-			.into(),
-			// 5D2EP4Fzap3WhFVudHDYRap27icoTQWDELbEH8LBC3NaxcBr
-			babe_id: hex!["2a593ffdbd46573e7ddb944dcf8bc93fc79607b96d0b9c20decd3c5805cef15a"]
-				.unchecked_into(),
-			// 5CKRFQnViKUtpyEmETsG2TxmzbWHDpGt9n9r1NWEVh9CU4RY
-			grandpa_id: hex!["0b38c61efa576a0df925baa9ddba97dfcb36f3d2e32084da0d09ab8d737ef5e0"]
-				.unchecked_into(),
-			// 5C8XGQheYHJYo3S6nzbFJWFfhozNDdpPvo46DqE1pb6RhPQN
-			im_online_id: hex!["02e954893604e4b91371d84d8f8d8dbda682fc29a87b17708f9c6605414e6903"]
-				.unchecked_into(),
-			// 5G1oVXujLY94p3BsJ8H7ZuYMkrWETxX3mERBRbbGe4MGATdt
-			validator_id: hex!["aeba2b31e4780def6a35f56eb5a0f5ef30109402736f58538f87fa78a6d3fa37"]
-				.unchecked_into(),
-			// 5DZpFuureoTg74t3QCWFeUsMsPbURQ2tiukr7McJQQZHAEBX
-			assignment_id: hex!["426fe5a68fecb20f382161d02465a677b97c94ce9683b07cdea60bfffb37991b"]
-				.unchecked_into(),
-			// 5E9di4V9UW77sy78EzTM5ASNvPT4CksWWj29tW2QFzaDAYtf
-			authority_discovery_id: hex![
-				"5c3abaa856e2ec0eb354ce330e5150a97a7a5f493ea638261d7ac541030d3717"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-		InitialAuthorityConfiguration {
-			// validator-thxfdn
-			// 5ENfZS3mZRd8aMTVpDZqN2DbqMsJMfH1p2Ymqxq1Bb7fwZBB
-			stash_account_id: hex![
-				"662b26b596347d8bacd5b661f52c9ec32a2b7079ee03e4e59d9e00fcff6fe52a"
-			]
-			.into(),
-			// 5F4RQCwzuxwK6iWnR6EMta7FYh3bB3uPYm2HiYE7wiQZsThg
-			controller_account_id: hex![
-				"847d4dc05b142db525beb4a8869a1663789d47427551cac09f2760ed7d80e15f"
-			]
-			.into(),
-			// 5FHEAHSTnkRrNcmf8bf9V9RZtDYbUhUcXhcySvZgETDxnQu8
-			babe_id: hex!["8e41a817a660904b75a7d71321e6f3c420be3fcb9f74795209c6cf502466df3f"]
-				.unchecked_into(),
-			// 5FW1LVeZKtrJB8RE3uWSEVsXSyFEkJA6PF5oEeKAnwi8cUMq
-			grandpa_id: hex!["9800ad75e2d3a5924b02bdff0346400916e4ced6afbbaca582d25c093d67dbf8"]
-				.unchecked_into(),
-			// 5EWUxzw6xDvsUvUTHVXn2Sxm4oRX8hAigNvvQejUjsjAtg54
-			im_online_id: hex!["6c2173f551a144379a53d4ce27d8cabc183debfb84edf4961abdc2342d5fab34"]
-				.unchecked_into(),
-			// 5GsRfLt27HHPESdn6WdSyec47imVrC6Gezh53xSVGBvkHPvm
-			validator_id: hex!["d492f31feeccf464d2da61c2734ac8d963f9ddf303f150270b352fe3e5d7d95a"]
-				.unchecked_into(),
-			// 5CkkEReymKzfrVJ12G1eEARth5CjdPvQrm7XjEVM9A2FD3Ng
-			assignment_id: hex!["1e89cfc1df4186b06ea615cc54b196bf7a050fce57f9722286934b937e62153f"]
-				.unchecked_into(),
-			// 5D4W4TiQXERPSTNJBeqntwgFVSvdVNMod4d684QADZzrcBmx
-			authority_discovery_id: hex![
-				"2c1485b504fceb98abd94ab0eababf08b0b616a6cb1c8066423b9600677e4a19"
-			]
-			.unchecked_into(),
-			endowed_balance: 100 * DOT,
-			stash: 50 * DOT,
-		},
-	];
-
-	// subkey inspect "$SECRET"
-	let endowed_accounts: Vec<(AccountId, u128)> = vec![
-		// mainnetpool
-		// 5EKwWcAFzP8wAqjaTo7uANPp3GNZDcMFjahbDMh75hU8hReW
-		(
-			hex!["64171c9eadeebc44f3d667cdbf447fefd3b66cf0337a419177332a4082685220"].into(),
-			100 * DOT,
-		),
-		// mainnetthxfoundation (thxtreasury)
-		// 5FxVFABwRiVRZo3YhdPMsDownhjephwa4mRmTsqTQ3gdvHBq
-		(
-			hex!["ac33013c3677c74c2a2ea265c5b876ba01050cd6454944b7af0ea03739ac9c70"].into(),
-			18_000_000 * DOT,
-		),
-		// thx! leafchain box
-		// 5ER7Sz8DHV2WQqBKJx56u3kTEMHLyjdg46YHqmNcmaogTYqR
-		(
-			hex!["6808caa8e9f5bcf37af356915f769028310c6e13fddd4b10bc15d33f02e83528"].into(),
-			1_000_000 * DOT,
-		),
-		// lmt leafchain box
-		// 5E7LvSpJGbEoGkS2meTvpv4isV1MS1RzVaji5uhwVqyEd8x2
-		(
-			hex!["5a7bbae410b463ad1567f937b203ab43a55e8d68a7166c4b2a0867b34b542813"].into(),
-			1_000_000 * DOT,
-		),
-	];
-
-	thxnet::GenesisConfig {
-		system: thxnet::SystemConfig { code: wasm_binary.to_vec() },
-		balances: thxnet::BalancesConfig {
-			balances: endowed_accounts
-				.iter()
-				.map(|x| (x.0.clone(), x.1))
-				.chain(
-					initial_authorities
-						.iter()
-						.map(|x| (x.stash_account_id.clone(), x.endowed_balance)),
-				)
-				.collect(),
-		},
-		indices: thxnet::IndicesConfig { indices: vec![] },
-		session: thxnet::SessionConfig {
-			keys: initial_authorities
-				.iter()
-				.map(|x| {
-					(
-						x.stash_account_id.clone(),
-						x.stash_account_id.clone(),
-						thxnet_session_keys(
-							x.babe_id.clone(),
-							x.grandpa_id.clone(),
-							x.im_online_id.clone(),
-							x.validator_id.clone(),
-							x.assignment_id.clone(),
-							x.authority_discovery_id.clone(),
-						),
-					)
-				})
-				.collect::<Vec<_>>(),
-		},
-		staking: thxnet::StakingConfig {
-			validator_count: 6,
-			minimum_validator_count: 4,
-			stakers: initial_authorities
-				.iter()
-				.map(|x| {
-					(
-						x.stash_account_id.clone(),
-						x.controller_account_id.clone(),
-						x.stash,
-						thxnet::StakerStatus::Validator,
-					)
-				})
-				.collect(),
-			invulnerables: Vec::new(),
-			force_era: Forcing::ForceNone,
-			slash_reward_fraction: Perbill::from_percent(10),
-			..Default::default()
-		},
-		sudo: thxnet::SudoConfig { key: Some(thxnet_runtime_constants::staking::get_root_id()) },
-		phragmen_election: Default::default(),
-		democracy: Default::default(),
-		council: thxnet::CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: thxnet::TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
-		},
-		technical_membership: Default::default(),
-		babe: thxnet::BabeConfig {
-			authorities: Default::default(),
-			epoch_config: Some(polkadot::BABE_GENESIS_EPOCH_CONFIG),
-		},
-		grandpa: Default::default(),
-		im_online: Default::default(),
-		authority_discovery: thxnet::AuthorityDiscoveryConfig { keys: vec![] },
-		claims: thxnet::ClaimsConfig { claims: vec![], vesting: vec![] },
-		vesting: thxnet::VestingConfig { vesting: vec![] },
-		treasury: Default::default(),
-		hrmp: Default::default(),
-		configuration: thxnet::ConfigurationConfig {
-			config: default_parachains_host_configuration(),
-		},
-		paras: Default::default(),
-		xcm_pallet: Default::default(),
-		nomination_pools: Default::default(),
-	}
-}
-
-#[cfg(feature = "polkadot-native")]
-fn thxnet_testnet_config_genesis(wasm_binary: &[u8]) -> thxnet_testnet::GenesisConfig {
-	use hex_literal::hex;
-	use sp_core::crypto::UncheckedInto;
-
-	let initial_authorities: Vec<(
-		AccountId,
-		AccountId,
-		BabeId,
-		GrandpaId,
-		ImOnlineId,
-		ValidatorId,
-		AssignmentId,
-		AuthorityDiscoveryId,
-	)> = vec![
-		(
-			// 5CkwmRM4iQwtdcsJKCfkRiU6tw5Yib1PC6cChdETwCPJsBrB
-			hex!["1eb0a3c82b6e651e19bf56cb20e151007457d633d73af54b2444cd315650a842"].into(),
-			// 5F1GDwGkKSKpnCvsNzFheuryGoLdbxrXhBifLRQynT3b2PyA
-			hex!["8214acba5b2943cf4e7d0b245f4e6798028a8214d83e9f25008961a30b603132"].into(),
-			// 5HGxRsCHrs7sygUafTFFnCuAYsyQsRd9cGqLfrRKuJNFYGEm
-			hex!["e6852ac65bf2c673dbca3e211a1956a118d5aea433c53dae1078b2a83feef803"]
-				.unchecked_into(),
-			// 5DRg6LS63WrZUj6EgyzRvbqsMHJDfjpT3vqf4JZGyJ2ggoVE
-			hex!["3c3a729484ca64c217c1223475b8d71d8c963ae22878fc0c1d553543d9278e72"]
-				.unchecked_into(),
-			// 5F7JXKSrULgfWjA8As9eWEPjKdJsXjb944JQ9LQueYUEqVYT
-			hex!["86afe37bd7f5f9c7211e87fb4d6fa581c71954b073fad0afd3e4770979e87f45"]
-				.unchecked_into(),
-			// 5FRL91hAWCweUsWav2by8CgqP5GMqv1pAqLG3sF41ijLN6jE
-			hex!["946fbe6ce7eeae65030b5af0e2765d208dc69092de041617da0bbb5aceab8163"]
-				.unchecked_into(),
-			// 5Hpr4uiqheHV74EvKv7swLVS43uRaxfMEKb6F7Gb5JbSHvbD
-			hex!["fed79b1dd5b4ff816280e4dcba4dabd70d26e0fb0c032b3ff868692dbd0b425d"]
-				.unchecked_into(),
-			// 5HVuHc5RrfPvNoacXbaCuAJxmEofecBsorxSFxB5efoFeyWd
-			hex!["f064c76c87d89cdaefed25300948a17819796644217db5616ea54a69594aec39"]
-				.unchecked_into(),
-		),
-		(
-			// 5EqkNPVSs7fodEU4ySTzwWaGJdqo29BpQcjUo3boLTZJsCjV
-			hex!["7ad2f7b6ad65c37f90940ef8bb1bbac9af5f1d6c12854dc049f6faf39c585c77"].into(),
-			// 5HRRErCwzXLx7DMm2pR4eA7dhgw3fW7ytQ4MWXawgSnmReaW
-			hex!["ecf96189411463e3ddf1b5fc9022d4d3929e78a9c51fe8c0904cf99c0d4ba847"].into(),
-			// 5DM6MwXneqrYQmqxhqCBRHXDasvkwSwa7saKA6tbKLWD4UuF
-			hex!["38bbeadfb243f7e2b609bb24a6eff5e6042850781bb1bdebdc65187b2d4a3e1d"]
-				.unchecked_into(),
-			// 5DmLUaMya6zfV2VMu1HFZNgJDYWDCTGxCqCsA7Xfb41z7jkM
-			hex!["4b39520aaf1043f932f986788ea401024e7e27196233f81a7c3e802d3f60df0f"]
-				.unchecked_into(),
-			// 5HgD7vpb3EHhjMgJ7wd9Z8ST5d2Mdj2dY9cYd1cU7B2R25dA
-			hex!["f84143ca44d116ddb40e54c5d49fe82448d76f0d32a3fd1053c807a102dc8b3a"]
-				.unchecked_into(),
-			// 5E2LvDQYFEKdbEDeUE8FYs2YW9MfxKmgv2C9QyLtzQ2qNKut
-			hex!["56ab7d568c8ffec76e2de459b6f598619d07f26b592b8fc478b16193d8275366"]
-				.unchecked_into(),
-			// 5DfZir5hkFdLUMQdzc5cZFTjTBG95FZv5dKE5BeHBYu6vKMp
-			hex!["46d270303707ed6d15ed00af25769920c17caeaed8938dbea3e5be615c30e364"]
-				.unchecked_into(),
-			// 5DZU8CU8AoEGKMReGnhKprxkLGpiqmRnpA5RZ6ZsU2983fLK
-			hex!["422c1f92029bf1202ce9d0612c678462ec4ca82d568f3ce62dc8ca15e0d96277"]
-				.unchecked_into(),
-		),
-		(
-			// 5FcHt7sPwQcJBSwCpcVVxYaHJjPpr8dCZgNQPyhaL4TMJpn7
-			hex!["9ccbd8a5fec38fd48cc9c2b20713ae096c3da5239b6ce90c16b8141d5cc3961b"].into(),
-			// 5Csw8Q1mUtDDmUBe253RYeF22FRuUvCzzMx1GL4NFSp4A2xc
-			hex!["240535741850f9f47d712ffa20bcd74a53daf6e89d51df923064776602291a2b"].into(),
-			// 5EA8WYJph49LzDguVaCSUgRDc67Saajkru6mhpakAKoMBJCf
-			hex!["5c9baee6188926c848b4d402fc3d73b3fe165434f1b07f239ab30c82b841096f"]
-				.unchecked_into(),
-			// 5GJzPdpUak8APiv7K1E32Bnx7PYFk8YEe7Q7bDH7mwX6mJk3
-			hex!["bbd6070f8491206c3f28d96673e14df32ee83d523c363d2eb8fd23682171e1cc"]
-				.unchecked_into(),
-			// 5EJLdDcd2NKYyqq8T9EcQrmfrU2fCxRi56PWvpBr3d11RKNW
-			hex!["62de6dfaa82b302d246868d17eb91f82d92665e3f93dee5ea7100d747e30e279"]
-				.unchecked_into(),
-			// 5FjwbQTsrwCNLGrThaAjnGvouB1QvcfyEFgPvWjPJsFN58ng
-			hex!["a2a18371537968250062aba938fa0162fd2f22cf7b364127e48a164035327857"]
-				.unchecked_into(),
-			// 5DUbUYph6YxNRzEB74JZt6VjfMa2T8pvxrXd3BRa31QbRVqu
-			hex!["3e74a43d6967109acd5fefbca47e2b2e70db6086d498fe431c9002bcfa659d19"]
-				.unchecked_into(),
-			// 5EqiMmUi7VeLPok9eX4j8VkaC9pmmegBAN7RfWVBFhjpjkGo
-			hex!["7acc32f14055684dd6342f847cc337a7a0f4a5b4f1d34a156cb5aac021d73743"]
-				.unchecked_into(),
-		),
-		(
-			// 5GpCZcvJ77asez67rCXH3TqNxViMU3jCcV4K2XWLGCubqtrA
-			hex!["d21d1e9146357728cf1ebd31f26aa8683930128f66fda9b32bce7932c28af43a"].into(),
-			// 5CGDSWgNycvNh1VNvoBEHsvBbde3Ar2vuHVp3w4rEonsazdE
-			hex!["08c749538aba7f401649a69d3ddbde89e2c7945ea31be19bf028216b39790426"].into(),
-			// 5FjbJBheYdckzrERnjYQxzGRgNG6vcgTXf7NkkktSVMgkH8V
-			hex!["a25d3020d560599c06fa7fe4d0c7d6da11b907a14bb5f2005b2a8fe91bc8a21d"]
-				.unchecked_into(),
-			// 5F2d8ztYGrV92YRvZ5d1FKEyHz9dmiP3exfrDszBT21SarYr
-			hex!["831e536aa186cdf509160e5bd71d2b62f4cc45d64b032396c2a3661ecaf65084"]
-				.unchecked_into(),
-			// 5HW6hcJr7XYA3JPW8rrseb1hdS5EuSDHCFvKT2uKSGvm2Ykf
-			hex!["f08b339472aa8a2a48d3f0f54996448ec0bb780ecd18f8158ca89364f8c4b967"]
-				.unchecked_into(),
-			// 5GHY1TKTkVdqmriYWmYnGRzyULFF7nP3qV1d46KurRoAPX1a
-			hex!["bab9f89315e720ab439e858e5ea4c74e13e443beb55ce41b2137283d847ffc1d"]
-				.unchecked_into(),
-			// 5EvuS2A5ZgM4wjsCuvdzTc9XrncHWLvEKFwfELYKVERMKTN8
-			hex!["7ec1b3c10198473f7579b44c8743b2f6a8d209db59299dd4474ea4d0c3170b28"]
-				.unchecked_into(),
-			// 5Ef5uTeUMpejJsRcVy6CLC9WyWVv5qAa9mXrphTz4RCiLT78
-			hex!["72b10801788a4ee606a5cd435f09ed094ba01e88f4c79aebc3570fe1c1267233"]
-				.unchecked_into(),
-		),
-		(
-			// 5EkCS6EqvLHxuhiWiWo5sJUGx9EkR8Jon3Uise1d13AcFFGi
-			hex!["76973be100ee6d4676763deabf645c10f8fbbd5d4390a7f41b442f82a610c46c"].into(),
-			// 5FxZAATm5E9ZNprEyKzpL1Rej4Xz6ihBd4tFNjpKyDxNBi3d
-			hex!["ac402e1b08d2fb31251280653748382ff175885885eeb30eef91921d8131934f"].into(),
-			// 5CDdFBKHGLj9T7HUzirFaD8P25B7Pe3wriNufWnmsSnGo9Qc
-			hex!["06cdaf00d5bfa2d3eb81d29a05599c8ff8d48b40184e6ad8b853a2a892a33957"]
-				.unchecked_into(),
-			// 5CSx4PUonZrEUXUZMiEmSX97d8Q8KmXeaT4AKJUSiv82rFWQ
-			hex!["10f73511ad077e0c4e43759ab937a701a703673897776179adf0d1ec73d8e9f6"]
-				.unchecked_into(),
-			// 5GjmgVm462wFq479re3n5wSdhX7JTtmm97Y5ANjqVM2Chkmo
-			hex!["cebc61203e4517ffbe88c9dcc7e89218a61cf43ce0007fa0568ad474c82dec74"]
-				.unchecked_into(),
-			// 5CcESnaBXSoWyRWoT4cWGN6DSjFhd1eagJc1ZmcTG5drMenW
-			hex!["180b93a412f8a5ef77b4840c21be4bec16623ea5ab0b16a913843f529bde8966"]
-				.unchecked_into(),
-			// 5DF7FvHP6f9QBKZsx3kXN668o58eJFKbXD8z1TgJFTx2Jphr
-			hex!["342b763ca00abaa4fafbd8e7c064dbebc66c1a6b4b965c1f19a32a5958291d7b"]
-				.unchecked_into(),
-			// 5DNvEGo7KYgyuMWev6VfBifaB4z1Qgi12Mn99NAUkcfa7xgf
-			hex!["3a204cdcc8b404e783bcdb8028cf8261ffd4fdfa79c02639e32d8e6c00c84a40"]
-				.unchecked_into(),
-		),
-		(
-			// 5GbGrPQkero2nmR8uSpAAmWdEvcXhbEzf8fRvLxio15CawfD
-			hex!["c8415e14b39b034eec9b7f6932d81395d0edd74ab3694bced061512c0a36a837"].into(),
-			// 5EHRfAp4n1J2kS66NxCf7mSgjoWvC45dtJXqCRHFu2ENTSiA
-			hex!["622c21049dd35f8394aa77aa6849b6696cc8df6e3ab84a6841472eb7f486186f"].into(),
-			// 5GzZ9N1jPPwevaTsDCYyNC5EriCxRh61uSg4NLZmYpr4Xzph
-			hex!["da02db9e19ddae2652726dba6617fa03cf95722ec0b63d1d75ac7a114cc15b70"]
-				.unchecked_into(),
-			// 5HqQbcxnSBxrnQaSGVDijNYhqitaURZxJyYAEPX6aYj7sLPW
-			hex!["ff451c27f50d7f41d9bc1f520ccc717eeff2f0040754b6411ceba8bdc51441bf"]
-				.unchecked_into(),
-			// 5G8pK2sDTNH96ac9yeEPRXEsU4npUU7d9A7tCHYGqbMw5o7Y
-			hex!["b413a4b5eb53b75486648a273f2f35504da48311f7cda6fcd8f1f8961e1d2455"]
-				.unchecked_into(),
-			// 5Gzkhhd6wrVwrGdpzhiK1FfqMMmKeigMJEKUNKmPCf6QUsZC
-			hex!["da29c39a5f3b1f6f90c5274df124e7ba36cce515dba0f27e6b1d21f3f90b4217"]
-				.unchecked_into(),
-			// 5HmiLfFNXRAgpvyUse3wErWQtD8XhohPxnbRxh5Z8RgmkWQP
-			hex!["fc73da7c70dfd520cd764762fc5870435f740e0c245127730be6f4b768318403"]
-				.unchecked_into(),
-			// 5GGuK83vnSqcm9i1iRncKn3D6JUTjbJ9ZVTyp5HeFBZxwnhr
-			hex!["ba3e717db4e832e005b292172c4ba3318881d076c352b487fdd1cb1a25666800"]
-				.unchecked_into(),
-		),
-	];
-
-	const ENDOWED: u128 = 20 * DOT;
-	const STASH: u128 = ENDOWED / 2;
-
-	// subkey inspect "$SECRET"
-	let endowed_accounts: Vec<(AccountId, u128)> = vec![
-		// testnetbit3x
-		// 5FqTnw7x2oWaDQYGom7FBFMieHUcP7n9ntUp6cagbyGZ3geT
-		(
-			hex!["a6d76609b529a4c1388878a292ec0b9fc0899c1dc7cfe0a4589b7bc310a5df5b"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet001
-		// 5HGdWCWcY8cp1qnY5FvCPXHWcJJaC5q2JEoyZDbFUFk4voGq
-		(
-			hex!["e6457578ddbe1bc069cb9f4ea788c23952774613659682df4be1e3f73a817150"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet002
-		// 5ELLS1vdojt9PPiK5F2XAHMtEd6koF9pLRiaEUiaPcER8fuz
-		(
-			hex!["6464453123b14dd0752ee20fb7b4099ac60719ee8cfa24d65c83766ba51df010"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet003
-		// 5EUzr2kfs1nXmk7boHi5PVv2k19kcLor2XLUNXfben3qWRnu
-		(
-			hex!["6aff8bf47cb8dc63fd776af5326b66aa201e2aa97a9724ba82e31a2287d1a77b"].into(),
-			50_000_000 * DOT,
-		),
-		// testnetthxlab
-		// 5G3XM6tJ2Q7aQTa4FheT24VbTxABvViRPDuVVFeATGvvyTxY
-		(
-			hex!["b00a4f336cecf197bb4d57b9332e393bf1e1cb2ff0ecc8da10bbb88f62fb516e"].into(),
-			50_000_000 * DOT,
-		),
-		// testnetpool
-		// 5D22dYGvG7ucZZBvFJRQQwKfSKK7LtuiUTshtC3UAukQz7RD
-		(
-			hex!["2a31b1e8908eb70be0a2688991189bdf4dda1732a43bd73d1ed6482d40343839"].into(),
-			75_000_000 * DOT - (initial_authorities.len() as u128) * ENDOWED,
-		),
-		// testnetthxfoundation
-		// 5GL2teb1jKjHgenowY4Y6EQvHkpRHJUpQCYVBDAXk4SADAib
-		(
-			hex!["bca1b0834cf3b7b0d9258e7a61e5169b16aabfd9233685bfaa8d15c8726b566f"].into(),
-			100_000_000 * DOT,
-		),
-	];
-
-	thxnet_testnet::GenesisConfig {
-		system: thxnet_testnet::SystemConfig { code: wasm_binary.to_vec() },
-		balances: thxnet_testnet::BalancesConfig {
-			balances: endowed_accounts
-				.iter()
-				.map(|x| (x.0.clone(), x.1))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), ENDOWED)))
-				.collect(),
-		},
-		indices: thxnet_testnet::IndicesConfig { indices: vec![] },
-		session: thxnet_testnet::SessionConfig {
-			keys: initial_authorities
-				.iter()
-				.map(|x| {
-					(
-						x.0.clone(),
-						x.0.clone(),
-						thxnet_testnet_session_keys(
-							x.2.clone(),
-							x.3.clone(),
-							x.4.clone(),
-							x.5.clone(),
-							x.6.clone(),
-							x.7.clone(),
-						),
-					)
-				})
-				.collect::<Vec<_>>(),
-		},
-		staking: thxnet_testnet::StakingConfig {
-			validator_count: 15,
-			minimum_validator_count: 4,
-			stakers: initial_authorities
-				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, thxnet_testnet::StakerStatus::Validator))
-				.collect(),
-			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
-			force_era: Forcing::ForceNone,
-			slash_reward_fraction: Perbill::from_percent(10),
-			..Default::default()
-		},
-		sudo: thxnet_testnet::SudoConfig {
-			key: Some(thxnet_testnet_runtime_constants::staking::get_root_id()),
-		},
-		phragmen_election: Default::default(),
-		democracy: Default::default(),
-		council: thxnet_testnet::CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: thxnet_testnet::TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
-		},
-		technical_membership: Default::default(),
-		babe: thxnet_testnet::BabeConfig {
-			authorities: Default::default(),
-			epoch_config: Some(thxnet_testnet::BABE_GENESIS_EPOCH_CONFIG),
-		},
-		grandpa: Default::default(),
-		im_online: Default::default(),
-		authority_discovery: thxnet_testnet::AuthorityDiscoveryConfig { keys: vec![] },
-		claims: thxnet_testnet::ClaimsConfig { claims: vec![], vesting: vec![] },
-		vesting: thxnet_testnet::VestingConfig { vesting: vec![] },
-		treasury: Default::default(),
-		hrmp: Default::default(),
-		configuration: thxnet_testnet::ConfigurationConfig {
-			config: default_parachains_host_configuration(),
-		},
-		paras: Default::default(),
-		xcm_pallet: Default::default(),
-		nomination_pools: Default::default(),
-	}
-}
-
-#[cfg(feature = "polkadot-native")]
 fn polkadot_staging_testnet_config_genesis(wasm_binary: &[u8]) -> polkadot::GenesisConfig {
-	use hex_literal::hex;
-	use sp_core::crypto::UncheckedInto;
+	// subkey inspect "$SECRET"
+	let endowed_accounts = vec![];
 
 	let initial_authorities: Vec<(
 		AccountId,
@@ -1124,209 +314,18 @@ fn polkadot_staging_testnet_config_genesis(wasm_binary: &[u8]) -> polkadot::Gene
 		ValidatorId,
 		AssignmentId,
 		AuthorityDiscoveryId,
-	)> = vec![
-		(
-			// 5CkwmRM4iQwtdcsJKCfkRiU6tw5Yib1PC6cChdETwCPJsBrB
-			hex!["1eb0a3c82b6e651e19bf56cb20e151007457d633d73af54b2444cd315650a842"].into(),
-			// 5F1GDwGkKSKpnCvsNzFheuryGoLdbxrXhBifLRQynT3b2PyA
-			hex!["8214acba5b2943cf4e7d0b245f4e6798028a8214d83e9f25008961a30b603132"].into(),
-			// 5HGxRsCHrs7sygUafTFFnCuAYsyQsRd9cGqLfrRKuJNFYGEm
-			hex!["e6852ac65bf2c673dbca3e211a1956a118d5aea433c53dae1078b2a83feef803"]
-				.unchecked_into(),
-			// 5DRg6LS63WrZUj6EgyzRvbqsMHJDfjpT3vqf4JZGyJ2ggoVE
-			hex!["3c3a729484ca64c217c1223475b8d71d8c963ae22878fc0c1d553543d9278e72"]
-				.unchecked_into(),
-			// 5F7JXKSrULgfWjA8As9eWEPjKdJsXjb944JQ9LQueYUEqVYT
-			hex!["86afe37bd7f5f9c7211e87fb4d6fa581c71954b073fad0afd3e4770979e87f45"]
-				.unchecked_into(),
-			// 5FRL91hAWCweUsWav2by8CgqP5GMqv1pAqLG3sF41ijLN6jE
-			hex!["946fbe6ce7eeae65030b5af0e2765d208dc69092de041617da0bbb5aceab8163"]
-				.unchecked_into(),
-			// 5Hpr4uiqheHV74EvKv7swLVS43uRaxfMEKb6F7Gb5JbSHvbD
-			hex!["fed79b1dd5b4ff816280e4dcba4dabd70d26e0fb0c032b3ff868692dbd0b425d"]
-				.unchecked_into(),
-			// 5HVuHc5RrfPvNoacXbaCuAJxmEofecBsorxSFxB5efoFeyWd
-			hex!["f064c76c87d89cdaefed25300948a17819796644217db5616ea54a69594aec39"]
-				.unchecked_into(),
-		),
-		(
-			// 5EqkNPVSs7fodEU4ySTzwWaGJdqo29BpQcjUo3boLTZJsCjV
-			hex!["7ad2f7b6ad65c37f90940ef8bb1bbac9af5f1d6c12854dc049f6faf39c585c77"].into(),
-			// 5HRRErCwzXLx7DMm2pR4eA7dhgw3fW7ytQ4MWXawgSnmReaW
-			hex!["ecf96189411463e3ddf1b5fc9022d4d3929e78a9c51fe8c0904cf99c0d4ba847"].into(),
-			// 5DM6MwXneqrYQmqxhqCBRHXDasvkwSwa7saKA6tbKLWD4UuF
-			hex!["38bbeadfb243f7e2b609bb24a6eff5e6042850781bb1bdebdc65187b2d4a3e1d"]
-				.unchecked_into(),
-			// 5DmLUaMya6zfV2VMu1HFZNgJDYWDCTGxCqCsA7Xfb41z7jkM
-			hex!["4b39520aaf1043f932f986788ea401024e7e27196233f81a7c3e802d3f60df0f"]
-				.unchecked_into(),
-			// 5HgD7vpb3EHhjMgJ7wd9Z8ST5d2Mdj2dY9cYd1cU7B2R25dA
-			hex!["f84143ca44d116ddb40e54c5d49fe82448d76f0d32a3fd1053c807a102dc8b3a"]
-				.unchecked_into(),
-			// 5E2LvDQYFEKdbEDeUE8FYs2YW9MfxKmgv2C9QyLtzQ2qNKut
-			hex!["56ab7d568c8ffec76e2de459b6f598619d07f26b592b8fc478b16193d8275366"]
-				.unchecked_into(),
-			// 5DfZir5hkFdLUMQdzc5cZFTjTBG95FZv5dKE5BeHBYu6vKMp
-			hex!["46d270303707ed6d15ed00af25769920c17caeaed8938dbea3e5be615c30e364"]
-				.unchecked_into(),
-			// 5DZU8CU8AoEGKMReGnhKprxkLGpiqmRnpA5RZ6ZsU2983fLK
-			hex!["422c1f92029bf1202ce9d0612c678462ec4ca82d568f3ce62dc8ca15e0d96277"]
-				.unchecked_into(),
-		),
-		(
-			// 5FcHt7sPwQcJBSwCpcVVxYaHJjPpr8dCZgNQPyhaL4TMJpn7
-			hex!["9ccbd8a5fec38fd48cc9c2b20713ae096c3da5239b6ce90c16b8141d5cc3961b"].into(),
-			// 5Csw8Q1mUtDDmUBe253RYeF22FRuUvCzzMx1GL4NFSp4A2xc
-			hex!["240535741850f9f47d712ffa20bcd74a53daf6e89d51df923064776602291a2b"].into(),
-			// 5EA8WYJph49LzDguVaCSUgRDc67Saajkru6mhpakAKoMBJCf
-			hex!["5c9baee6188926c848b4d402fc3d73b3fe165434f1b07f239ab30c82b841096f"]
-				.unchecked_into(),
-			// 5GJzPdpUak8APiv7K1E32Bnx7PYFk8YEe7Q7bDH7mwX6mJk3
-			hex!["bbd6070f8491206c3f28d96673e14df32ee83d523c363d2eb8fd23682171e1cc"]
-				.unchecked_into(),
-			// 5EJLdDcd2NKYyqq8T9EcQrmfrU2fCxRi56PWvpBr3d11RKNW
-			hex!["62de6dfaa82b302d246868d17eb91f82d92665e3f93dee5ea7100d747e30e279"]
-				.unchecked_into(),
-			// 5FjwbQTsrwCNLGrThaAjnGvouB1QvcfyEFgPvWjPJsFN58ng
-			hex!["a2a18371537968250062aba938fa0162fd2f22cf7b364127e48a164035327857"]
-				.unchecked_into(),
-			// 5DUbUYph6YxNRzEB74JZt6VjfMa2T8pvxrXd3BRa31QbRVqu
-			hex!["3e74a43d6967109acd5fefbca47e2b2e70db6086d498fe431c9002bcfa659d19"]
-				.unchecked_into(),
-			// 5EqiMmUi7VeLPok9eX4j8VkaC9pmmegBAN7RfWVBFhjpjkGo
-			hex!["7acc32f14055684dd6342f847cc337a7a0f4a5b4f1d34a156cb5aac021d73743"]
-				.unchecked_into(),
-		),
-		(
-			// 5GpCZcvJ77asez67rCXH3TqNxViMU3jCcV4K2XWLGCubqtrA
-			hex!["d21d1e9146357728cf1ebd31f26aa8683930128f66fda9b32bce7932c28af43a"].into(),
-			// 5CGDSWgNycvNh1VNvoBEHsvBbde3Ar2vuHVp3w4rEonsazdE
-			hex!["08c749538aba7f401649a69d3ddbde89e2c7945ea31be19bf028216b39790426"].into(),
-			// 5FjbJBheYdckzrERnjYQxzGRgNG6vcgTXf7NkkktSVMgkH8V
-			hex!["a25d3020d560599c06fa7fe4d0c7d6da11b907a14bb5f2005b2a8fe91bc8a21d"]
-				.unchecked_into(),
-			// 5F2d8ztYGrV92YRvZ5d1FKEyHz9dmiP3exfrDszBT21SarYr
-			hex!["831e536aa186cdf509160e5bd71d2b62f4cc45d64b032396c2a3661ecaf65084"]
-				.unchecked_into(),
-			// 5HW6hcJr7XYA3JPW8rrseb1hdS5EuSDHCFvKT2uKSGvm2Ykf
-			hex!["f08b339472aa8a2a48d3f0f54996448ec0bb780ecd18f8158ca89364f8c4b967"]
-				.unchecked_into(),
-			// 5GHY1TKTkVdqmriYWmYnGRzyULFF7nP3qV1d46KurRoAPX1a
-			hex!["bab9f89315e720ab439e858e5ea4c74e13e443beb55ce41b2137283d847ffc1d"]
-				.unchecked_into(),
-			// 5EvuS2A5ZgM4wjsCuvdzTc9XrncHWLvEKFwfELYKVERMKTN8
-			hex!["7ec1b3c10198473f7579b44c8743b2f6a8d209db59299dd4474ea4d0c3170b28"]
-				.unchecked_into(),
-			// 5Ef5uTeUMpejJsRcVy6CLC9WyWVv5qAa9mXrphTz4RCiLT78
-			hex!["72b10801788a4ee606a5cd435f09ed094ba01e88f4c79aebc3570fe1c1267233"]
-				.unchecked_into(),
-		),
-		(
-			// 5EkCS6EqvLHxuhiWiWo5sJUGx9EkR8Jon3Uise1d13AcFFGi
-			hex!["76973be100ee6d4676763deabf645c10f8fbbd5d4390a7f41b442f82a610c46c"].into(),
-			// 5FxZAATm5E9ZNprEyKzpL1Rej4Xz6ihBd4tFNjpKyDxNBi3d
-			hex!["ac402e1b08d2fb31251280653748382ff175885885eeb30eef91921d8131934f"].into(),
-			// 5CDdFBKHGLj9T7HUzirFaD8P25B7Pe3wriNufWnmsSnGo9Qc
-			hex!["06cdaf00d5bfa2d3eb81d29a05599c8ff8d48b40184e6ad8b853a2a892a33957"]
-				.unchecked_into(),
-			// 5CSx4PUonZrEUXUZMiEmSX97d8Q8KmXeaT4AKJUSiv82rFWQ
-			hex!["10f73511ad077e0c4e43759ab937a701a703673897776179adf0d1ec73d8e9f6"]
-				.unchecked_into(),
-			// 5GjmgVm462wFq479re3n5wSdhX7JTtmm97Y5ANjqVM2Chkmo
-			hex!["cebc61203e4517ffbe88c9dcc7e89218a61cf43ce0007fa0568ad474c82dec74"]
-				.unchecked_into(),
-			// 5CcESnaBXSoWyRWoT4cWGN6DSjFhd1eagJc1ZmcTG5drMenW
-			hex!["180b93a412f8a5ef77b4840c21be4bec16623ea5ab0b16a913843f529bde8966"]
-				.unchecked_into(),
-			// 5DF7FvHP6f9QBKZsx3kXN668o58eJFKbXD8z1TgJFTx2Jphr
-			hex!["342b763ca00abaa4fafbd8e7c064dbebc66c1a6b4b965c1f19a32a5958291d7b"]
-				.unchecked_into(),
-			// 5DNvEGo7KYgyuMWev6VfBifaB4z1Qgi12Mn99NAUkcfa7xgf
-			hex!["3a204cdcc8b404e783bcdb8028cf8261ffd4fdfa79c02639e32d8e6c00c84a40"]
-				.unchecked_into(),
-		),
-		(
-			// 5GbGrPQkero2nmR8uSpAAmWdEvcXhbEzf8fRvLxio15CawfD
-			hex!["c8415e14b39b034eec9b7f6932d81395d0edd74ab3694bced061512c0a36a837"].into(),
-			// 5EHRfAp4n1J2kS66NxCf7mSgjoWvC45dtJXqCRHFu2ENTSiA
-			hex!["622c21049dd35f8394aa77aa6849b6696cc8df6e3ab84a6841472eb7f486186f"].into(),
-			// 5GzZ9N1jPPwevaTsDCYyNC5EriCxRh61uSg4NLZmYpr4Xzph
-			hex!["da02db9e19ddae2652726dba6617fa03cf95722ec0b63d1d75ac7a114cc15b70"]
-				.unchecked_into(),
-			// 5HqQbcxnSBxrnQaSGVDijNYhqitaURZxJyYAEPX6aYj7sLPW
-			hex!["ff451c27f50d7f41d9bc1f520ccc717eeff2f0040754b6411ceba8bdc51441bf"]
-				.unchecked_into(),
-			// 5G8pK2sDTNH96ac9yeEPRXEsU4npUU7d9A7tCHYGqbMw5o7Y
-			hex!["b413a4b5eb53b75486648a273f2f35504da48311f7cda6fcd8f1f8961e1d2455"]
-				.unchecked_into(),
-			// 5Gzkhhd6wrVwrGdpzhiK1FfqMMmKeigMJEKUNKmPCf6QUsZC
-			hex!["da29c39a5f3b1f6f90c5274df124e7ba36cce515dba0f27e6b1d21f3f90b4217"]
-				.unchecked_into(),
-			// 5HmiLfFNXRAgpvyUse3wErWQtD8XhohPxnbRxh5Z8RgmkWQP
-			hex!["fc73da7c70dfd520cd764762fc5870435f740e0c245127730be6f4b768318403"]
-				.unchecked_into(),
-			// 5GGuK83vnSqcm9i1iRncKn3D6JUTjbJ9ZVTyp5HeFBZxwnhr
-			hex!["ba3e717db4e832e005b292172c4ba3318881d076c352b487fdd1cb1a25666800"]
-				.unchecked_into(),
-		),
-	];
+	)> = vec![];
 
-	const ENDOWED: u128 = 20 * DOT;
-	const STASH: u128 = ENDOWED / 2;
-
-	// subkey inspect "$SECRET"
-	let endowed_accounts: Vec<(AccountId, u128)> = vec![
-		// testnetbit3x
-		// 5FqTnw7x2oWaDQYGom7FBFMieHUcP7n9ntUp6cagbyGZ3geT
-		(
-			hex!["a6d76609b529a4c1388878a292ec0b9fc0899c1dc7cfe0a4589b7bc310a5df5b"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet001
-		// 5HGdWCWcY8cp1qnY5FvCPXHWcJJaC5q2JEoyZDbFUFk4voGq
-		(
-			hex!["e6457578ddbe1bc069cb9f4ea788c23952774613659682df4be1e3f73a817150"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet002
-		// 5ELLS1vdojt9PPiK5F2XAHMtEd6koF9pLRiaEUiaPcER8fuz
-		(
-			hex!["6464453123b14dd0752ee20fb7b4099ac60719ee8cfa24d65c83766ba51df010"].into(),
-			75_000_000 * DOT,
-		),
-		// testnet003
-		// 5EUzr2kfs1nXmk7boHi5PVv2k19kcLor2XLUNXfben3qWRnu
-		(
-			hex!["6aff8bf47cb8dc63fd776af5326b66aa201e2aa97a9724ba82e31a2287d1a77b"].into(),
-			50_000_000 * DOT,
-		),
-		// testnetthxlab
-		// 5G3XM6tJ2Q7aQTa4FheT24VbTxABvViRPDuVVFeATGvvyTxY
-		(
-			hex!["b00a4f336cecf197bb4d57b9332e393bf1e1cb2ff0ecc8da10bbb88f62fb516e"].into(),
-			50_000_000 * DOT,
-		),
-		// testnetpool
-		// 5D22dYGvG7ucZZBvFJRQQwKfSKK7LtuiUTshtC3UAukQz7RD
-		(
-			hex!["2a31b1e8908eb70be0a2688991189bdf4dda1732a43bd73d1ed6482d40343839"].into(),
-			75_000_000 * DOT - (initial_authorities.len() as u128) * ENDOWED,
-		),
-		// testnetthxfoundation
-		// 5GL2teb1jKjHgenowY4Y6EQvHkpRHJUpQCYVBDAXk4SADAib
-		(
-			hex!["bca1b0834cf3b7b0d9258e7a61e5169b16aabfd9233685bfaa8d15c8726b566f"].into(),
-			100_000_000 * DOT,
-		),
-	];
+	const ENDOWMENT: u128 = 1_000_000 * DOT;
+	const STASH: u128 = 100 * DOT;
 
 	polkadot::GenesisConfig {
 		system: polkadot::SystemConfig { code: wasm_binary.to_vec() },
 		balances: polkadot::BalancesConfig {
 			balances: endowed_accounts
 				.iter()
-				.map(|x| (x.0.clone(), x.1))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), ENDOWED)))
+				.map(|k: &AccountId| (k.clone(), ENDOWMENT))
+				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
 				.collect(),
 		},
 		indices: polkadot::IndicesConfig { indices: vec![] },
@@ -1350,19 +349,16 @@ fn polkadot_staging_testnet_config_genesis(wasm_binary: &[u8]) -> polkadot::Gene
 				.collect::<Vec<_>>(),
 		},
 		staking: polkadot::StakingConfig {
-			validator_count: 15,
+			validator_count: 50,
 			minimum_validator_count: 4,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, polkadot::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, polkadot::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::ForceNone,
 			slash_reward_fraction: Perbill::from_percent(10),
 			..Default::default()
-		},
-		sudo: polkadot::SudoConfig {
-			key: Some(polkadot_runtime_constants::staking::get_root_id()),
 		},
 		phragmen_election: Default::default(),
 		democracy: Default::default(),
@@ -1548,7 +544,7 @@ fn westend_staging_testnet_config_genesis(wasm_binary: &[u8]) -> westend::Genesi
 			minimum_validator_count: 4,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, westend::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, westend::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::ForceNone,
@@ -1738,21 +734,13 @@ fn kusama_staging_testnet_config_genesis(wasm_binary: &[u8]) -> kusama::GenesisC
 			minimum_validator_count: 4,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, kusama::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, kusama::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::ForceNone,
 			slash_reward_fraction: Perbill::from_percent(10),
 			..Default::default()
 		},
-		phragmen_election: Default::default(),
-		democracy: Default::default(),
-		council: kusama::CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: kusama::TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
-		},
-		technical_membership: Default::default(),
 		babe: kusama::BabeConfig {
 			authorities: Default::default(),
 			epoch_config: Some(kusama::BABE_GENESIS_EPOCH_CONFIG),
@@ -2084,9 +1072,7 @@ fn rococo_staging_testnet_config_genesis(wasm_binary: &[u8]) -> rococo_runtime::
 /// Returns the properties for the [`PolkadotChainSpec`].
 pub fn polkadot_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
 	serde_json::json!({
-		"tokenSymbol": "THXDEV",
 		"tokenDecimals": 10,
-		"ss58Format": 42,
 	})
 	.as_object()
 	.expect("Map given; qed")
@@ -2100,78 +1086,18 @@ pub fn polkadot_staging_testnet_config() -> Result<PolkadotChainSpec, String> {
 	let boot_nodes = vec![];
 
 	Ok(PolkadotChainSpec::from_genesis(
-		"THXNET. Testnet",
-		"thxnet_testnet",
+		"Polkadot Staging Testnet",
+		"polkadot_staging_testnet",
 		ChainType::Live,
 		move || polkadot_staging_testnet_config_genesis(wasm_binary),
 		boot_nodes,
-		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(
+			TelemetryEndpoints::new(vec![(POLKADOT_STAGING_TELEMETRY_URL.to_string(), 0)])
+				.expect("Polkadot Staging telemetry url is valid; qed"),
+		),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(polkadot_chain_spec_properties()),
-		Default::default(),
-	))
-}
-
-/// Returns the properties for the [`PolkadotChainSpec`].
-pub fn thxnet_testnet_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
-	serde_json::json!({
-		"tokenSymbol": "THXDEV",
-		"tokenDecimals": 10,
-		"ss58Format": 42,
-	})
-	.as_object()
-	.expect("Map given; qed")
-	.clone()
-}
-
-/// Polkadot staging testnet config.
-pub fn thxnet_testnet_config() -> Result<ThxnetTestnetChainSpec, String> {
-	let wasm_binary =
-		thxnet_testnet::WASM_BINARY.ok_or("THXNET. development wasm not available")?;
-	let boot_nodes = Vec::new();
-
-	Ok(ThxnetTestnetChainSpec::from_genesis(
-		"THXNET. Testnet",
-		"thxnet_testnet",
-		ChainType::Live,
-		move || thxnet_testnet_config_genesis(wasm_binary),
-		boot_nodes,
-		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
-		None,
-		Some(thxnet_testnet_chain_spec_properties()),
-		Default::default(),
-	))
-}
-
-/// Returns the properties for the [`PolkadotChainSpec`].
-pub fn thxnet_mainnet_chain_spec_properties() -> serde_json::map::Map<String, serde_json::Value> {
-	serde_json::json!({
-		"tokenSymbol": "THX",
-		"tokenDecimals": 10,
-		"ss58Format": 42,
-	})
-	.as_object()
-	.expect("Map given; qed")
-	.clone()
-}
-
-/// Polkadot staging testnet config.
-pub fn thxnet_mainnet_config() -> Result<ThxnetChainSpec, String> {
-	let wasm_binary = thxnet::WASM_BINARY.ok_or("THXNET. development wasm not available")?;
-	let boot_nodes = Vec::new();
-
-	Ok(ThxnetChainSpec::from_genesis(
-		"THXNET. Mainnet",
-		"thxnet_mainnet",
-		ChainType::Live,
-		move || thxnet_mainnet_config_genesis(wasm_binary),
-		boot_nodes,
-		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
-		None,
-		Some(thxnet_mainnet_chain_spec_properties()),
 		Default::default(),
 	))
 }
@@ -2192,7 +1118,7 @@ pub fn kusama_staging_testnet_config() -> Result<KusamaChainSpec, String> {
 			TelemetryEndpoints::new(vec![(KUSAMA_STAGING_TELEMETRY_URL.to_string(), 0)])
 				.expect("Kusama Staging telemetry url is valid; qed"),
 		),
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2215,7 +1141,7 @@ pub fn westend_staging_testnet_config() -> Result<WestendChainSpec, String> {
 			TelemetryEndpoints::new(vec![(WESTEND_STAGING_TELEMETRY_URL.to_string(), 0)])
 				.expect("Westend Staging telemetry url is valid; qed"),
 		),
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2241,7 +1167,7 @@ pub fn rococo_staging_testnet_config() -> Result<RococoChainSpec, String> {
 			TelemetryEndpoints::new(vec![(ROCOCO_STAGING_TELEMETRY_URL.to_string(), 0)])
 				.expect("Rococo Staging telemetry url is valid; qed"),
 		),
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2412,14 +1338,13 @@ pub fn polkadot_testnet_genesis(
 			validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, polkadot::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, polkadot::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::NotForcing,
 			slash_reward_fraction: Perbill::from_percent(10),
 			..Default::default()
 		},
-		sudo: polkadot::SudoConfig { key: Some(_root_key) },
 		phragmen_election: Default::default(),
 		democracy: polkadot::DemocracyConfig::default(),
 		council: polkadot::CouncilConfig { members: vec![], phantom: Default::default() },
@@ -2500,21 +1425,13 @@ pub fn kusama_testnet_genesis(
 			validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, kusama::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, kusama::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::NotForcing,
 			slash_reward_fraction: Perbill::from_percent(10),
 			..Default::default()
 		},
-		phragmen_election: Default::default(),
-		democracy: kusama::DemocracyConfig::default(),
-		council: kusama::CouncilConfig { members: vec![], phantom: Default::default() },
-		technical_committee: kusama::TechnicalCommitteeConfig {
-			members: vec![],
-			phantom: Default::default(),
-		},
-		technical_membership: Default::default(),
 		babe: kusama::BabeConfig {
 			authorities: Default::default(),
 			epoch_config: Some(kusama::BABE_GENESIS_EPOCH_CONFIG),
@@ -2588,7 +1505,7 @@ pub fn westend_testnet_genesis(
 			validator_count: initial_authorities.len() as u32,
 			stakers: initial_authorities
 				.iter()
-				.map(|x| (x.0.clone(), x.1.clone(), STASH, westend::StakerStatus::Validator))
+				.map(|x| (x.0.clone(), x.0.clone(), STASH, westend::StakerStatus::Validator))
 				.collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			force_era: Forcing::NotForcing,
@@ -2753,7 +1670,7 @@ pub fn polkadot_development_config() -> Result<PolkadotChainSpec, String> {
 		move || polkadot_development_config_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(polkadot_chain_spec_properties()),
 		Default::default(),
@@ -2772,7 +1689,7 @@ pub fn kusama_development_config() -> Result<KusamaChainSpec, String> {
 		move || kusama_development_config_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2791,7 +1708,7 @@ pub fn westend_development_config() -> Result<WestendChainSpec, String> {
 		move || westend_development_config_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2814,7 +1731,7 @@ pub fn rococo_development_config() -> Result<RococoChainSpec, String> {
 		},
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2893,7 +1810,7 @@ pub fn polkadot_local_testnet_config() -> Result<PolkadotChainSpec, String> {
 		move || polkadot_local_testnet_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(polkadot_chain_spec_properties()),
 		Default::default(),
@@ -2925,7 +1842,7 @@ pub fn kusama_local_testnet_config() -> Result<KusamaChainSpec, String> {
 		move || kusama_local_testnet_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2957,7 +1874,7 @@ pub fn westend_local_testnet_config() -> Result<WestendChainSpec, String> {
 		move || westend_local_testnet_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -2990,7 +1907,7 @@ pub fn rococo_local_testnet_config() -> Result<RococoChainSpec, String> {
 		},
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),
@@ -3029,7 +1946,7 @@ pub fn wococo_local_testnet_config() -> Result<RococoChainSpec, String> {
 		},
 		vec![],
 		None,
-		Some(THXNET_DEFAULT_PROTOCOL_ID),
+		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		None,
 		Default::default(),

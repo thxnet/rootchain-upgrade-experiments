@@ -17,6 +17,13 @@ ARG SCCACHE_BUCKET
 ARG SCCACHE_ENDPOINT
 ARG SCCACHE_S3_USE_SSL
 
+# Environment variables required for v0.9.43 build
+ENV SKIP_WASM_BUILD=1 \
+    CC=clang-14 \
+    CXX=clang++-14 \
+    LIBCLANG_PATH=/usr/lib/llvm-14/lib \
+    CXXFLAGS="-include cstdint"
+
 RUN cargo build --locked --release
 
 # This is the 2nd stage: a very small image where we copy the THXENT. binary."

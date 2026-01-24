@@ -16,7 +16,7 @@ version.workspace = true
 authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2021"
 repository = "https://github.com/paritytech/polkadot.git"
-version = "0.9.40"
+version = "0.9.43"
 
 [dependencies]
 color-eyre = { version = "0.6.1", default-features = false }
@@ -28,7 +28,7 @@ polkadot-cli = { path = "cli", features = [
     "westend-native",
     "rococo-native",
 ] }
-polkadot-node-core-pvf = { path = "node/core/pvf" }
+polkadot-node-core-pvf-worker = { path = "node/core/pvf/worker" }
 polkadot-overseer = { path = "node/overseer" }
 
 [dev-dependencies]
@@ -36,7 +36,7 @@ assert_cmd = "2.0.4"
 nix = { version = "0.26.1", features = ["signal"] }
 tempfile = "3.2.0"
 tokio = "1.24.2"
-substrate-rpc-client = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+substrate-rpc-client = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 polkadot-core-primitives = { path = "core-primitives" }
 
 [workspace]
@@ -88,6 +88,7 @@ members = [
     "node/core/parachains-inherent",
     "node/core/provisioner",
     "node/core/pvf",
+    "node/core/pvf/worker",
     "node/core/pvf-checker",
     "node/core/runtime-api",
     "node/network/approval-distribution",
@@ -216,7 +217,7 @@ fast-runtime = ["polkadot-cli/fast-runtime"]
 runtime-metrics = ["polkadot-cli/runtime-metrics"]
 pyroscope = ["polkadot-cli/pyroscope"]
 jemalloc-allocator = [
-    "polkadot-node-core-pvf/jemalloc-allocator",
+    "polkadot-node-core-pvf-worker/jemalloc-allocator",
     "polkadot-overseer/jemalloc-allocator",
 ]
 

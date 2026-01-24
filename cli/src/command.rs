@@ -1,4 +1,4 @@
-// Copyright 2017-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // This file is part of Polkadot.
 
 // Polkadot is free software: you can redistribute it and/or modify
@@ -30,6 +30,8 @@ use std::net::ToSocketAddrs;
 pub use crate::{error::Error, service::BlockId};
 #[cfg(feature = "hostperfcheck")]
 pub use polkadot_performance_test::PerfCheckError;
+#[cfg(feature = "pyroscope")]
+use pyroscope_pprofrs::{pprof_backend, PprofConfig};
 
 impl From<String> for Error {
 	fn from(s: String) -> Self {
@@ -48,7 +50,7 @@ fn get_exec_name() -> Option<String> {
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"THXLAB THXNET.".into()
+		"Parity Polkadot".into()
 	}
 
 	fn impl_version() -> String {
@@ -78,7 +80,7 @@ impl SubstrateCli for Cli {
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		let id = if id == "" {
 			let n = get_exec_name().unwrap_or_default();
-			["thxnet", "polkadot", "kusama", "westend", "rococo", "versi"]
+			["polkadot", "kusama", "westend", "rococo", "versi"]
 				.iter()
 				.cloned()
 				.find(|&chain| n.starts_with(chain))
@@ -87,8 +89,6 @@ impl SubstrateCli for Cli {
 			id
 		};
 		Ok(match id {
-			"thxnet-testnet" => Box::new(service::chain_spec::thxnet_testnet_config()?),
-			"thxnet-mainnet" => Box::new(service::chain_spec::thxnet_mainnet_config()?),
 			"kusama" => Box::new(service::chain_spec::kusama_config()?),
 			#[cfg(feature = "kusama-native")]
 			"kusama-dev" => Box::new(service::chain_spec::kusama_development_config()?),
@@ -379,14 +379,13 @@ pub fn run() -> Result<()> {
 			.next()
 			.ok_or_else(|| Error::AddressResolutionMissing)?;
 		// The pyroscope agent requires a `http://` prefix, so we just do that.
-		let mut agent = pyro::PyroscopeAgent::builder(
+		let agent = pyro::PyroscopeAgent::builder(
 			"http://".to_owned() + address.to_string().as_str(),
 			"polkadot".to_owned(),
 		)
-		.sample_rate(113)
+		.backend(pprof_backend(PprofConfig::new().sample_rate(113)))
 		.build()?;
-		agent.start();
-		Some(agent)
+		Some(agent.start()?)
 	} else {
 		None
 	};
@@ -496,7 +495,10 @@ pub fn run() -> Result<()> {
 
 			#[cfg(not(target_os = "android"))]
 			{
-				polkadot_node_core_pvf::prepare_worker_entrypoint(&cmd.socket_path);
+				polkadot_node_core_pvf_worker::prepare_worker_entrypoint(
+					&cmd.socket_path,
+					Some(&cmd.node_impl_version),
+				);
 				Ok(())
 			}
 		},
@@ -515,7 +517,10 @@ pub fn run() -> Result<()> {
 
 			#[cfg(not(target_os = "android"))]
 			{
-				polkadot_node_core_pvf::execute_worker_entrypoint(&cmd.socket_path);
+				polkadot_node_core_pvf_worker::execute_worker_entrypoint(
+					&cmd.socket_path,
+					Some(&cmd.node_impl_version),
+				);
 				Ok(())
 			}
 		},
@@ -723,8 +728,9 @@ pub fn run() -> Result<()> {
 	}?;
 
 	#[cfg(feature = "pyroscope")]
-	if let Some(mut pyroscope_agent) = pyroscope_agent_maybe.take() {
-		pyroscope_agent.stop();
+	if let Some(pyroscope_agent) = pyroscope_agent_maybe.take() {
+		let agent = pyroscope_agent.stop()?;
+		agent.shutdown();
 	}
 	Ok(())
 }
