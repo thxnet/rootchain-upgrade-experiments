@@ -1,40 +1,40 @@
-# Pallet Storage/Methods/Calls 變更清單
+# Pallet Storage/Methods/Calls Change List
 
-**分析日期**: 2026-01-19
-**升級版本**: v0.9.40 → v0.9.43
-**適用範圍**: Rootchain (mainnet/testnet) 和 Leafchains (parachains)
-
----
-
-## 執行摘要
-
-### 變更嚴重程度
-
-| 類別 | 變更數量 | 風險等級 |
-|------|---------|----------|
-| 完全移除的 Pallet | 1 (UMP) | 🔴 HIGH |
-| 新增的 Pallet | 1 (MessageQueue) | 🟡 MEDIUM |
-| Storage 變更 | 8 pallets | 🟡 MEDIUM |
-| Call 變更 | 5 pallets | 🟡 MEDIUM |
-| Runtime API 變更 | v2 → v4 | 🟢 LOW |
+**Analysis Date**: 2026-01-19
+**Upgrade Version**: v0.9.40 → v0.9.43
+**Scope**: Rootchain (mainnet/testnet) and Leafchains (parachains)
 
 ---
 
-## 第一部分：Rootchain Pallet 變更
+## Executive Summary
 
-### 1. ⚠️ parachains_ump (完全移除)
+### Change Severity
 
-**變更類型**: 🔴 **完全移除並替換**
+| Category | Change Count | Risk Level |
+|----------|-------------|------------|
+| Completely Removed Pallet | 1 (UMP) | HIGH |
+| New Pallet | 1 (MessageQueue) | MEDIUM |
+| Storage Changes | 8 pallets | MEDIUM |
+| Call Changes | 5 pallets | MEDIUM |
+| Runtime API Changes | v2 → v4 | LOW |
 
-| 項目 | v0.9.40 | v0.9.43 |
+---
+
+## Part 1: Rootchain Pallet Changes
+
+### 1. parachains_ump (Completely Removed)
+
+**Change Type**: **Completely Removed and Replaced**
+
+| Item | v0.9.40 | v0.9.43 |
 |------|---------|---------|
-| 狀態 | 存在 | **已移除** |
-| 替代 | - | `pallet_message_queue` |
-| 索引 | 59 | (保留空位) |
+| Status | Exists | **Removed** |
+| Replacement | - | `pallet_message_queue` |
+| Index | 59 | (Reserved) |
 
-**移除的 Storage**:
+**Removed Storage**:
 ```rust
-// 全部移除
+// All removed
 RelayDispatchQueues: StorageMap<ParaId, Vec<UpwardMessage>>
 RelayDispatchQueueSize: StorageMap<ParaId, (u32, u32)>
 NeedsDispatch: StorageValue<Vec<ParaId>>
@@ -43,32 +43,32 @@ Overweight: StorageMap<OverweightIndex, (ParaId, Hash, Vec<u8>)>
 OverweightCount: StorageValue<OverweightIndex>
 ```
 
-**移除的 Calls**:
+**Removed Calls**:
 ```rust
-// 全部移除
+// All removed
 service_overweight(index: OverweightIndex, weight_limit: Weight)
 ```
 
-**遷移需求**:
-- UMP dispatch queue 需要遷移到 MessageQueue
-- 使用 `parachains_configuration::migration::v6` 處理
+**Migration Requirements**:
+- UMP dispatch queue needs to be migrated to MessageQueue
+- Use `parachains_configuration::migration::v6` for handling
 
 ---
 
-### 2. ✨ pallet_message_queue (新增)
+### 2. pallet_message_queue (New)
 
-**變更類型**: 🟢 **新增 Pallet**
+**Change Type**: **New Pallet**
 
-**Pallet 索引**: 59 (thxnet), 100 (polkadot 參考)
+**Pallet Index**: 59 (thxnet), 100 (polkadot reference)
 
-**新增 Storage**:
+**New Storage**:
 ```rust
 BookStateFor: StorageMap<MessageOrigin, BookState<MessageOrigin>>
 ServiceHead: StorageValue<MessageOrigin>
 Pages: StorageDoubleMap<MessageOrigin, PageIndex, Page<Size, HeapSize>>
 ```
 
-**新增 Calls**:
+**New Calls**:
 ```rust
 reap_page(message_origin: MessageOrigin, page_index: PageIndex)
 execute_overweight(
@@ -79,7 +79,7 @@ execute_overweight(
 )
 ```
 
-**新增 Events**:
+**New Events**:
 ```rust
 ProcessingFailed { id: [u8; 32], origin: MessageOrigin, error: ProcessMessageError }
 Processed { id: [u8; 32], origin: MessageOrigin, weight_used: Weight, success: bool }
@@ -91,21 +91,21 @@ PageReaped { origin: MessageOrigin, index: PageIndex }
 
 ### 3. parachains_configuration
 
-**變更類型**: 🟡 **Storage 版本升級 v4 → v6**
+**Change Type**: **Storage Version Upgrade v4 → v6**
 
-**移除的 Storage 欄位**:
+**Removed Storage Fields**:
 ```rust
-// v4 → v5 移除
+// v4 → v5 removed
 ump_service_total_weight: Weight
 ump_max_individual_weight: Weight
 
-// v5 → v6 移除
+// v5 → v6 removed
 dispute_conclusion_by_time_out_period: BlockNumber
 ```
 
-**新增的 Storage 欄位**:
+**New Storage Fields**:
 ```rust
-// v6 新增
+// v6 new
 async_backing_params: AsyncBackingParams {
     max_candidate_depth: u32,
     allowed_ancestry_len: u32,
@@ -113,14 +113,14 @@ async_backing_params: AsyncBackingParams {
 executor_params: ExecutorParams
 ```
 
-**移除的 Calls**:
+**Removed Calls**:
 ```rust
 set_ump_service_total_weight(new: Weight)       // call_index 26
 set_ump_max_individual_weight(new: Weight)      // call_index 40
 set_dispute_conclusion_by_time_out_period(new: BlockNumber)  // call_index 17
 ```
 
-**新增的 Calls**:
+**New Calls**:
 ```rust
 set_async_backing_params(new: AsyncBackingParams)  // call_index 45
 set_config_with_executor_params()                   // call_index 46
@@ -130,24 +130,24 @@ set_config_with_executor_params()                   // call_index 46
 
 ### 4. parachains_dmp
 
-**變更類型**: 🟡 **Call 移除，新增 Fee 機制**
+**Change Type**: **Call Removed, New Fee Mechanism Added**
 
-**Calls 變更**:
+**Calls Changes**:
 ```rust
-// v0.9.40: 有 Call
+// v0.9.40: Has Call
 Dmp: parachains_dmp::{Pallet, Call, Storage}
 
-// v0.9.43: 移除 Call
+// v0.9.43: Call Removed
 Dmp: parachains_dmp::{Pallet, Storage}
 ```
 
-**新增 Storage**:
+**New Storage**:
 ```rust
-// 新增動態費用因子
-DeliveryFeeFactor<T>: StorageMap<ParaId, FixedU128>  // 初始值 1.0
+// New dynamic fee factor
+DeliveryFeeFactor<T>: StorageMap<ParaId, FixedU128>  // Initial value 1.0
 ```
 
-**新增常數**:
+**New Constants**:
 ```rust
 THRESHOLD_FACTOR = 2
 EXPONENTIAL_FEE_BASE = 1.05
@@ -158,9 +158,9 @@ MESSAGE_SIZE_FEE_BASE = 0.001
 
 ### 5. parachains_inclusion
 
-**變更類型**: 🟡 **Config 擴展**
+**Change Type**: **Config Extended**
 
-**Config 變更**:
+**Config Changes**:
 ```rust
 // v0.9.40 Config
 impl parachains_inclusion::Config for Runtime {
@@ -169,22 +169,22 @@ impl parachains_inclusion::Config for Runtime {
     type RewardValidators = RewardValidatorsWithEraPoints<Runtime>;
 }
 
-// v0.9.43 Config (新增)
+// v0.9.43 Config (new items added)
 impl parachains_inclusion::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type DisputesHandler = ParasDisputes;
     type RewardValidators = RewardValidatorsWithEraPoints<Runtime>;
-    type MessageQueue = MessageQueue;              // 新增
-    type WeightInfo = weights::runtime_parachains_inclusion::WeightInfo<Runtime>;  // 新增
+    type MessageQueue = MessageQueue;              // New
+    type WeightInfo = weights::runtime_parachains_inclusion::WeightInfo<Runtime>;  // New
 }
 ```
 
-**新增 Events**:
+**New Events**:
 ```rust
 UpwardMessagesReceived { from: ParaId, count: u32 }
 ```
 
-**新增 Types**:
+**New Types**:
 ```rust
 AggregateMessageOrigin::Ump(UmpQueueId)
 UmpQueueId::Para(ParaId)
@@ -201,56 +201,56 @@ UmpAcceptanceCheckErr {
 
 ### 6. parachains_paras
 
-**變更類型**: 🟡 **Config 擴展**
+**Change Type**: **Config Extended**
 
-**Config 變更**:
+**Config Changes**:
 ```rust
-// v0.9.43 新增
+// v0.9.43 new
 type QueueFootprinter: QueueFootprinter<Origin = UmpQueueId>;
 ```
 
-**行為變更**:
-- 新增 `is_offboarding(id: ParaId) -> bool` 函數
-- Offboarding 時檢查 UMP 隊列是否清空
+**Behavior Changes**:
+- Added `is_offboarding(id: ParaId) -> bool` function
+- Checks if UMP queue is empty during offboarding
 
 ---
 
 ### 7. parachains_disputes
 
-**變更類型**: 🟡 **Storage 版本升級 v0 → v1**
+**Change Type**: **Storage Version Upgrade v0 → v1**
 
-**移除的 Events**:
+**Removed Events**:
 ```rust
-DisputeTimedOut(CandidateHash)  // 移除 timeout 機制
+DisputeTimedOut(CandidateHash)  // Timeout mechanism removed
 ```
 
-**新增 Flags**:
+**New Flags**:
 ```rust
-DisputeStateFlags::AGAINST_BYZANTINE = 0b1000  // f+1 即觸發 chain freeze
+DisputeStateFlags::AGAINST_BYZANTINE = 0b1000  // f+1 triggers chain freeze
 ```
 
 ---
 
 ### 8. parachains_hrmp
 
-**變更類型**: 🟢 **邏輯放寬**
+**Change Type**: **Logic Relaxed**
 
-**Watermark 規則變更**:
+**Watermark Rule Changes**:
 ```rust
-// v0.9.40: 嚴格遞增
+// v0.9.40: Strictly increasing
 new_watermark > last_watermark
 
-// v0.9.43: 允許追趕到 relay parent
-new_watermark == relay_chain_parent_number  // 總是有效
+// v0.9.43: Allow catching up to relay parent
+new_watermark == relay_chain_parent_number  // Always valid
 ```
 
 ---
 
 ### 9. pallet_balances
 
-**變更類型**: 🟡 **Config 擴展**
+**Change Type**: **Config Extended**
 
-**新增 Config 項目**:
+**New Config Items**:
 ```rust
 type HoldIdentifier = ();
 type FreezeIdentifier = ();
@@ -262,31 +262,31 @@ type MaxFreezes = ConstU32<0>;
 
 ### 10. pallet_sudo
 
-**變更類型**: 🟢 **小幅擴展**
+**Change Type**: **Minor Extension**
 
-**新增 Config 項目**:
+**New Config Items**:
 ```rust
-type WeightInfo = ();  // 新增
+type WeightInfo = ();  // New
 ```
 
 ---
 
 ### 11. pallet_collective
 
-**變更類型**: 🟡 **Config 擴展**
+**Change Type**: **Config Extended**
 
-**新增 Config 項目**:
+**New Config Items**:
 ```rust
-type MaxProposalWeight = MaxCollectiveWeight;  // 新增
+type MaxProposalWeight = MaxCollectiveWeight;  // New
 ```
 
 ---
 
 ### 12. pallet_xcm
 
-**變更類型**: 🟡 **Config 擴展**
+**Change Type**: **Config Extended**
 
-**新增 Config 項目**:
+**New Config Items**:
 ```rust
 type AdminOrigin = EnsureRoot<AccountId>;
 type MaxRemoteLockConsumers = ConstU32<0>;
@@ -295,61 +295,61 @@ type RemoteLockConsumerIdentifier = ();
 
 ---
 
-## 第二部分：Runtime API 變更
+## Part 2: Runtime API Changes
 
 ### ParachainHost API
 
-| 版本 | 方法 | 狀態 |
-|------|------|------|
-| v2 | validators(), validator_groups(), ... | ✅ 保留 |
-| v3 | disputes() | ✅ 新增 (v0.9.43) |
-| v4 | session_executor_params() | ✅ 新增 (v0.9.43) |
+| Version | Methods | Status |
+|---------|---------|--------|
+| v2 | validators(), validator_groups(), ... | Retained |
+| v3 | disputes() | New (v0.9.43) |
+| v4 | session_executor_params() | New (v0.9.43) |
 
-**活躍網絡 API**: v3 (支持 disputes，不支持 session_executor_params)
-**代碼庫 API**: v4 (完整支持)
+**Live Network API**: v3 (supports disputes, does not support session_executor_params)
+**Codebase API**: v4 (full support)
 
 ---
 
-## 第三部分：Leafchain 變更分析
+## Part 3: Leafchain Change Analysis
 
-### Leafchain 當前狀態 (v0.9.40)
+### Leafchain Current State (v0.9.40)
 
-| Pallet | 索引 | 用途 |
-|--------|------|------|
-| ParachainSystem | 1 | Parachain 系統整合 |
-| XcmpQueue | 30 | XCMP 訊息隊列 |
-| PolkadotXcm | 31 | XCM 執行 |
+| Pallet | Index | Purpose |
+|--------|-------|---------|
+| ParachainSystem | 1 | Parachain system integration |
+| XcmpQueue | 30 | XCMP message queue |
+| PolkadotXcm | 31 | XCM execution |
 | CumulusXcm | 32 | Cumulus XCM |
-| DmpQueue | 33 | DMP 訊息處理 |
+| DmpQueue | 33 | DMP message handling |
 
-### 與升級後 Rootchain 的相容性
+### Compatibility with Upgraded Rootchain
 
-| 項目 | 相容性 | 說明 |
-|------|--------|------|
-| UMP 訊息發送 | ✅ 相容 | Leafchain 發送的 UMP 由 Rootchain 處理 |
-| DMP 訊息接收 | ✅ 相容 | DMP 格式不變 |
-| HRMP 通道 | ✅ 相容 | HRMP 格式不變 |
-| Collator 協議 | 🟡 待驗證 | P2P 協議可能有差異 |
-| PVF 執行 | ✅ 相容 | v0.9.43 節點可執行 v0.9.40 WASM |
+| Item | Compatibility | Notes |
+|------|---------------|-------|
+| UMP Message Sending | Compatible | UMP sent by Leafchain is processed by Rootchain |
+| DMP Message Receiving | Compatible | DMP format unchanged |
+| HRMP Channels | Compatible | HRMP format unchanged |
+| Collator Protocol | Needs Verification | P2P protocol may differ |
+| PVF Execution | Compatible | v0.9.43 node can execute v0.9.40 WASM |
 
-### Leafchain 不需要升級
+### Leafchain Does Not Need Upgrade
 
-由於：
-1. Leafchain runtime WASM 在 Rootchain 上執行
-2. 訊息格式在協議層面向後相容
-3. Collator 只需要與 Rootchain 節點通訊
+Because:
+1. Leafchain runtime WASM executes on Rootchain
+2. Message formats are backward compatible at protocol level
+3. Collators only need to communicate with Rootchain nodes
 
 ---
 
-## 第四部分：遷移清單
+## Part 4: Migration Checklist
 
-### 需要的 Runtime 遷移
+### Required Runtime Migrations
 
-如果升級 Runtime WASM，需要以下遷移：
+If upgrading Runtime WASM, the following migrations are needed:
 
 ```rust
 pub type Migrations = (
-    // v0.9.38: XCM v1 遷移
+    // v0.9.38: XCM v1 migration
     pallet_xcm::migration::v1::MigrateToV1<Runtime>,
 
     // v0.9.40: Nomination Pools
@@ -367,54 +367,54 @@ pub type Migrations = (
 );
 ```
 
-### Node-Only 升級不需要遷移
+### Node-Only Upgrade Does Not Need Migration
 
-如果只升級節點二進位檔（不升級 Runtime WASM）：
-- ✅ 不需要 storage 遷移
-- ✅ 節點自動適應 runtime API 版本
-- ✅ 相容機制會自動降級
-
----
-
-## 第五部分：Call Index 變更摘要
-
-### 變更的 Call Indices
-
-| Pallet | 舊 Call | 新 Call | 變更 |
-|--------|---------|---------|------|
-| Configuration | set_ump_service_total_weight (26) | - | 移除 |
-| Configuration | set_ump_max_individual_weight (40) | - | 移除 |
-| Configuration | set_dispute_conclusion_by_time_out_period (17) | - | 移除 |
-| Configuration | - | set_async_backing_params (45) | 新增 |
-| Configuration | - | set_config_with_executor_params (46) | 新增 |
-| Dmp | (全部) | - | 移除 |
-| Ump | service_overweight | - | 移除 (整個 pallet) |
-| MessageQueue | - | reap_page | 新增 |
-| MessageQueue | - | execute_overweight | 新增 |
+If only upgrading the node binary (not upgrading Runtime WASM):
+- No storage migration needed
+- Node automatically adapts to runtime API version
+- Compatibility mechanisms auto-downgrade
 
 ---
 
-## 第六部分：總結
+## Part 5: Call Index Change Summary
 
-### Node-Only 升級影響
+### Changed Call Indices
 
-| 項目 | 影響 | 行動 |
-|------|------|------|
-| Rootchain 節點 | ✅ 可安全升級 | 編譯並替換二進位檔 |
-| Rootchain Runtime | 無變更 | 使用 on-chain WASM |
-| Leafchain Collator | ✅ 保持不變 | 無需操作 |
-| Leafchain Runtime | 無變更 | 無需操作 |
-
-### Runtime 升級影響 (如果之後執行)
-
-| 項目 | 影響 | 行動 |
-|------|------|------|
-| Storage 遷移 | 需要多個遷移 | 添加 Migrations tuple |
-| Pallet 索引 | 保持不變 | 驗證一致性 |
-| Call 索引 | 部分變更 | 更新前端/工具 |
-| API 版本 | v3 → v4 | 節點自動處理 |
+| Pallet | Old Call | New Call | Change |
+|--------|----------|----------|--------|
+| Configuration | set_ump_service_total_weight (26) | - | Removed |
+| Configuration | set_ump_max_individual_weight (40) | - | Removed |
+| Configuration | set_dispute_conclusion_by_time_out_period (17) | - | Removed |
+| Configuration | - | set_async_backing_params (45) | Added |
+| Configuration | - | set_config_with_executor_params (46) | Added |
+| Dmp | (all) | - | Removed |
+| Ump | service_overweight | - | Removed (entire pallet) |
+| MessageQueue | - | reap_page | Added |
+| MessageQueue | - | execute_overweight | Added |
 
 ---
 
-**報告生成時間**: 2026-01-19
-**審查工具**: Claude Code
+## Part 6: Summary
+
+### Node-Only Upgrade Impact
+
+| Item | Impact | Action |
+|------|--------|--------|
+| Rootchain Node | Safe to upgrade | Compile and replace binary |
+| Rootchain Runtime | No change | Use on-chain WASM |
+| Leafchain Collator | Keep unchanged | No action needed |
+| Leafchain Runtime | No change | No action needed |
+
+### Runtime Upgrade Impact (if executed later)
+
+| Item | Impact | Action |
+|------|--------|--------|
+| Storage Migration | Multiple migrations needed | Add Migrations tuple |
+| Pallet Index | Keep unchanged | Verify consistency |
+| Call Index | Partial changes | Update frontend/tools |
+| API Version | v3 → v4 | Node handles automatically |
+
+---
+
+**Report Generated**: 2026-01-19
+**Review Tool**: Claude Code

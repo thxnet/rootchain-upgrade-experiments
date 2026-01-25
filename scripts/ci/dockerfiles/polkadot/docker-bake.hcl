@@ -17,14 +17,7 @@ target "rootchain" {
   target     = "rootchain"
   tags       = ["${CONTAINER_REGISTRY}/rootchain:${TAG}"]
   platforms  = ["linux/amd64"]
-  args = {
-    RUSTC_WRAPPER         = "/usr/bin/sccache"
-    AWS_ACCESS_KEY_ID     = null
-    AWS_SECRET_ACCESS_KEY = null
-    SCCACHE_BUCKET        = null
-    SCCACHE_ENDPOINT      = null
-    SCCACHE_S3_USE_SSL    = null
-  }
+  args = {}
   label = {
     "description"                 = "Container image for THXNET."
     "io.thxnet.image.type"        = "final"
@@ -33,8 +26,7 @@ target "rootchain" {
     "io.thxnet.image.description" = "THXNET.: The Hybrid Next-Gen Blockchain Network"
   }
   contexts = {
-    sccache         = "docker-image://ghcr.io/thxnet/ci-containers/sccache:0.5.4"
-    substrate-based = "docker-image://ghcr.io/thxnet/ci-containers/substrate-based:build-2023.05.20-41956af"
-    ubuntu          = "docker-image://docker.io/library/ubuntu:22.04"
+    ci-linux = "docker-image://docker.io/paritytech/ci-linux:production"
+    ubuntu   = "docker-image://docker.io/library/ubuntu:20.04"
   }
 }

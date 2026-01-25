@@ -2,7 +2,7 @@
 , version
 , lib
 , rustPlatform
-, llvmPackages
+, llvmPackages_14
 , protobuf
 }:
 
@@ -21,8 +21,8 @@ rustPlatform.buildRustPackage {
   };
 
   nativeBuildInputs = [
-    llvmPackages.clang
-    llvmPackages.libclang
+    llvmPackages_14.clang
+    llvmPackages_14.libclang
 
     protobuf
   ];
@@ -32,7 +32,7 @@ rustPlatform.buildRustPackage {
   PROTOC = "${protobuf}/bin/protoc";
   PROTOC_INCLUDE = "${protobuf}/include";
 
-  LIBCLANG_PATH = "${llvmPackages.libclang.lib}/lib";
+  LIBCLANG_PATH = "${llvmPackages_14.libclang.lib}/lib";
 
   SUBSTRATE_CLI_GIT_COMMIT_HASH = "";
 }

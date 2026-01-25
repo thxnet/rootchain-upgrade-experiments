@@ -2,7 +2,7 @@
 
 ## CRITICAL REMINDER
 
-**一定要切記參考 `/root/Works/` 目錄中的 polkadot 和 substrate 並切換至可參考的 branches/tags，不要瞎忙！**
+**Always remember to reference the polkadot and substrate repos in `/root/Works/` directory and switch to the appropriate branches/tags. Don't waste time working blindly!**
 
 Before making ANY changes to substrate/polkadot dependencies:
 1. Check `/root/Works/polkadot` - the reference polkadot repo
@@ -18,38 +18,45 @@ cat node/service/Cargo.toml | grep 'branch = "polkadot'
 
 ---
 
-## Current State (as of 2026-01-18)
+## Current State (as of 2026-01-25)
 
 - **rootchain version**: 0.9.43
 - **Substrate branch**: `polkadot-v0.9.43`
-- **Rust toolchain**: `nightly-2023-05-22`
-- **Build status**: SUCCESS (with SKIP_WASM_BUILD=1)
-
-### Known Issues
-1. **WASM runtime build fails** due to newer crate versions on crates.io requiring Rust 2024 edition
-2. **thxnet/thxnet-testnet runtimes disabled** - need to update for v0.9.43 API compatibility
+- **Rust toolchain**: `nightly-2023-05-23` (rustc 1.71.0-nightly 8b4b20836 2023-05-22)
+- **Docker base image**: `docker.io/paritytech/ci-linux:production`
+- **Build status**: SUCCESS (including WASM runtimes)
 
 ---
 
 ## Build Environment
 
-### Required Environment Variables
+### Aligned with Official Polkadot v0.9.43
+
+This repo now uses the same build environment as official Polkadot v0.9.43:
+
+| Component | Version |
+|-----------|---------|
+| Rust Stable | 1.69.0 |
+| Rust Nightly | 1.71.0-nightly (8b4b20836 2023-05-22) |
+| Clang | clang-14 |
+| Docker Image | paritytech/ci-linux:production |
+
+### Local Build Commands
 
 ```bash
-SKIP_WASM_BUILD=1 \
-CC=clang-14 \
-CXX=clang++-14 \
-LIBCLANG_PATH=/usr/lib/llvm-14/lib \
-CXXFLAGS="-include cstdint" \
+# Full build with WASM runtimes
+CC=clang-14 CXX=clang++-14 LIBCLANG_PATH=/usr/lib/llvm-14/lib \
+cargo build --release
+
+# Skip WASM build (faster for development)
+SKIP_WASM_BUILD=1 CC=clang-14 CXX=clang++-14 LIBCLANG_PATH=/usr/lib/llvm-14/lib \
 cargo build --release
 ```
 
-### Why These Are Needed
+### Environment Variables Explained
 
-1. **`SKIP_WASM_BUILD=1`**: Skips WASM runtime building (crates.io has newer versions requiring Rust 2024 edition)
-2. **`CC=clang-14 CXX=clang++-14`**: Older clang for RocksDB C++ compatibility
-3. **`LIBCLANG_PATH=/usr/lib/llvm-14/lib`**: bindgen 0.60.1 panics with clang 18
-4. **`CXXFLAGS="-include cstdint"`**: RocksDB headers missing `#include <cstdint>`
+1. **`CC=clang-14 CXX=clang++-14`**: Required for RocksDB C++ compatibility
+2. **`LIBCLANG_PATH=/usr/lib/llvm-14/lib`**: bindgen requires clang-14 library path
 
 ---
 
