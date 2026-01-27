@@ -259,6 +259,9 @@ pub trait IdentifyVariant {
 	/// Returns if this is a configuration for the `Versi` test network.
 	fn is_versi(&self) -> bool;
 
+	/// Returns if this is a configuration for the `THXnet` network.
+	fn is_thxnet(&self) -> bool;
+
 	/// Returns true if this configuration is for a development network.
 	fn is_dev(&self) -> bool;
 }
@@ -281,6 +284,9 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 	}
 	fn is_versi(&self) -> bool {
 		self.id().starts_with("versi") || self.id().starts_with("vrs")
+	}
+	fn is_thxnet(&self) -> bool {
+		self.id().starts_with("thxnet") || self.id().starts_with("thx")
 	}
 	fn is_dev(&self) -> bool {
 		self.id().ends_with("dev")

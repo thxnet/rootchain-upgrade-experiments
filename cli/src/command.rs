@@ -143,6 +143,13 @@ impl SubstrateCli for Cli {
 			#[cfg(not(feature = "rococo-native"))]
 			name if name.starts_with("versi-") =>
 				Err(format!("`{}` only supported with `rococo-native` feature enabled.", name))?,
+			#[cfg(feature = "thxnet-native")]
+			"thxnet-dev" => Box::new(service::chain_spec::thxnet_development_config()?),
+			#[cfg(feature = "thxnet-native")]
+			"thxnet-local" => Box::new(service::chain_spec::thxnet_local_testnet_config()?),
+			#[cfg(not(feature = "thxnet-native"))]
+			name if name.starts_with("thxnet-") && !name.ends_with(".json") =>
+				Err(format!("`{}` only supported with `thxnet-native` feature enabled.", name))?,
 			path => {
 				let path = std::path::PathBuf::from(path);
 
