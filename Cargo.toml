@@ -216,6 +216,7 @@ try-runtime = ["polkadot-cli/try-runtime"]
 fast-runtime = ["polkadot-cli/fast-runtime"]
 runtime-metrics = ["polkadot-cli/runtime-metrics"]
 pyroscope = ["polkadot-cli/pyroscope"]
+thxnet-native = ["polkadot-cli/thxnet-native"]
 jemalloc-allocator = [
     "polkadot-node-core-pvf-worker/jemalloc-allocator",
     "polkadot-overseer/jemalloc-allocator",

@@ -290,6 +290,7 @@ try-runtime = [
     "pallet-assets/try-runtime",
     "pallet-asset-tx-payment/try-runtime",
     "pallet-nfts/try-runtime",
+    "pallet-dao/try-runtime",
 ]
 # When enabled, the runtime API will not be build.
 #

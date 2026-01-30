@@ -92,7 +92,7 @@ pub use polkadot_client::KusamaExecutorDispatch;
 #[cfg(feature = "polkadot-native")]
 pub use polkadot_client::PolkadotExecutorDispatch;
 
-pub use chain_spec::{KusamaChainSpec, PolkadotChainSpec, RococoChainSpec, WestendChainSpec};
+pub use chain_spec::{KusamaChainSpec, PolkadotChainSpec, RococoChainSpec, ThxnetChainSpec, WestendChainSpec};
 pub use consensus_common::{block_validation::Chain, Proposal, SelectChain};
 use frame_benchmarking_cli::SUBSTRATE_REFERENCE_HARDWARE;
 use mmr_gadget::MmrGadget;
@@ -259,6 +259,9 @@ pub trait IdentifyVariant {
 	/// Returns if this is a configuration for the `Versi` test network.
 	fn is_versi(&self) -> bool;
 
+	/// Returns if this is a configuration for the `THXnet` network.
+	fn is_thxnet(&self) -> bool;
+
 	/// Returns true if this configuration is for a development network.
 	fn is_dev(&self) -> bool;
 }
@@ -281,6 +284,9 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 	}
 	fn is_versi(&self) -> bool {
 		self.id().starts_with("versi") || self.id().starts_with("vrs")
+	}
+	fn is_thxnet(&self) -> bool {
+		self.id().starts_with("thxnet") || self.id().starts_with("thx")
 	}
 	fn is_dev(&self) -> bool {
 		self.id().ends_with("dev")

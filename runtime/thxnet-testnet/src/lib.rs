@@ -138,7 +138,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("thxnet"),
 	impl_name: create_runtime_str!("thxlab"),
 	authoring_version: 0,
-	spec_version: 94000003,
+	spec_version: 94300000,
 	impl_version: 0,
 	#[cfg(not(feature = "disable-runtime-api"))]
 	apis: RUNTIME_API_VERSIONS,
@@ -1778,15 +1778,122 @@ impl Get<Perbill> for NominationPoolsMigrationV4OldPallet {
 	}
 }
 
-/// All migrations that will run on the next runtime upgrade.
-///
-/// Should be cleared after every release.
+/// All migrations for the v0.9.40 → v0.9.43 upgrade. THE ORDER IS IMPORTANT.
 pub type Migrations = (
-	pallet_nomination_pools::migration::v4::MigrateToV4<
-		Runtime,
-		NominationPoolsMigrationV4OldPallet,
-	>,
+	migrations::V0940,
+	migrations::V0942,
+	migrations::V0943,
 );
+
+/// The runtime migrations per release.
+#[allow(deprecated, missing_docs)]
+pub mod migrations {
+	use super::*;
+	use frame_support::traits::{GetStorageVersion, OnRuntimeUpgrade, StorageVersion};
+
+	/// v0.9.40 release migrations.
+	///
+	/// `EnsureGlobalMaxCommission` runs first so that the v4 migration's
+	/// `post_upgrade` check finds `GlobalMaxCommission == Some(Perbill::zero())`.
+	/// On the live chain NominationPools is already at storage version 4, so
+	/// `MigrateToV4` itself is a no-op, but its `post_upgrade` still validates.
+	pub type V0940 = (
+		EnsureGlobalMaxCommission,
+		pallet_nomination_pools::migration::v4::MigrateToV4<
+			Runtime,
+			NominationPoolsMigrationV4OldPallet,
+		>,
+		pallet_nomination_pools::migration::v5::MigrateToV5<Runtime>,
+	);
+
+	/// v0.9.42 release migrations.
+	pub type V0942 = (
+		parachains_configuration::migration::v5::MigrateToV5<Runtime>,
+		pallet_offences::migration::v1::MigrateToV1<Runtime>,
+		runtime_common::session::migration::ClearOldSessionStorage<Runtime>,
+	);
+
+	/// v0.9.43 release migrations.
+	pub type V0943 = (
+		SetStorageVersions,
+		parachains_configuration::migration::v6::MigrateToV6<Runtime>,
+		ump_migrations::UpdateUmpLimits,
+	);
+
+	/// Ensure `GlobalMaxCommission` is set before NominationPools v4/v5
+	/// migrations run. On the live chain, the v4 migration already ran (storage
+	/// version is 4) but `GlobalMaxCommission` was never written because the
+	/// previous runtime did not include this migration. The v4 `post_upgrade`
+	/// check expects `Some(NominationPoolsMigrationV4OldPallet::get())`.
+	pub struct EnsureGlobalMaxCommission;
+
+	impl OnRuntimeUpgrade for EnsureGlobalMaxCommission {
+		fn on_runtime_upgrade() -> Weight {
+			if pallet_nomination_pools::GlobalMaxCommission::<Runtime>::get().is_none() {
+				let val = NominationPoolsMigrationV4OldPallet::get();
+				pallet_nomination_pools::GlobalMaxCommission::<Runtime>::put(val);
+				log::info!(
+					target: "runtime::migration",
+					"Set GlobalMaxCommission to {:?}",
+					val,
+				);
+				<Runtime as frame_system::Config>::DbWeight::get().reads_writes(1, 1)
+			} else {
+				<Runtime as frame_system::Config>::DbWeight::get().reads(1)
+			}
+		}
+	}
+
+	/// Manually set `StorageVersion`s for pallets that bumped version
+	/// without requiring data migration (Bounties v0→v4, ParasDisputes v0→v1,
+	/// Crowdloan v1→v2).
+	pub struct SetStorageVersions;
+
+	impl OnRuntimeUpgrade for SetStorageVersions {
+		fn on_runtime_upgrade() -> Weight {
+			let mut writes = 0u64;
+
+			// Bounties: v0 → v4 (no data migration, just version bump)
+			if Bounties::on_chain_storage_version() < 4 {
+				StorageVersion::new(4).put::<Bounties>();
+				writes += 1;
+			}
+
+			// ParasDisputes: v0 → v1
+			if ParasDisputes::on_chain_storage_version() < 1 {
+				StorageVersion::new(1).put::<ParasDisputes>();
+				writes += 1;
+			}
+
+			// Crowdloan: v1 → v2
+			if Crowdloan::on_chain_storage_version() < 2 {
+				StorageVersion::new(2).put::<Crowdloan>();
+				writes += 1;
+			}
+
+			<Runtime as frame_system::Config>::DbWeight::get()
+				.reads_writes(3, writes)
+		}
+	}
+}
+
+/// UMP migration helpers (same pattern as polkadot runtime).
+pub mod ump_migrations {
+	use runtime_parachains::configuration::migration_ump;
+
+	pub const MAX_UPWARD_QUEUE_SIZE: u32 = 1 * 1024 * 1024;
+	pub const MAX_UPWARD_QUEUE_COUNT: u32 = 174762;
+	pub const MAX_UPWARD_MESSAGE_SIZE: u32 = (1 << 16) - 5;
+	pub const MAX_UPWARD_MESSAGE_NUM_PER_CANDIDATE: u32 = 16;
+
+	pub type UpdateUmpLimits = migration_ump::latest::ScheduleConfigUpdate<
+		super::Runtime,
+		MAX_UPWARD_QUEUE_SIZE,
+		MAX_UPWARD_QUEUE_COUNT,
+		MAX_UPWARD_MESSAGE_SIZE,
+		MAX_UPWARD_MESSAGE_NUM_PER_CANDIDATE,
+	>;
+}
 
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
