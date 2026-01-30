@@ -168,6 +168,8 @@ impl SubstrateCli for Cli {
 					Box::new(service::KusamaChainSpec::from_json_file(path)?)
 				} else if self.run.force_westend || chain_spec.is_westend() {
 					Box::new(service::WestendChainSpec::from_json_file(path)?)
+				} else if chain_spec.is_thxnet() {
+					Box::new(service::ThxnetChainSpec::from_json_file(path)?)
 				} else {
 					chain_spec
 				}
